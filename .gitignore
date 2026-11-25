@@ -1,0 +1,17 @@
+# macOS / Xcode
+.DS_Store
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+
+# Node
+node_modules/
+*.log
+
+# Server local data and secrets
+server/.env
+server/*.db
+server/uploads/*
+!server/uploads/.gitkeep
+

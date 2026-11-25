@@ -9,7 +9,7 @@ struct MainTabView: View {
             ComingSoonView(title: "Clubs", systemImage: "person.3")
                 .tabItem { Label("Clubs", systemImage: "person.3") }
 
-            AccountPlaceholderView()
+            ProfileView()
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }
         }
     }
@@ -24,28 +24,6 @@ private struct ComingSoonView: View {
             ContentUnavailableView(title, systemImage: systemImage, description: Text("Coming soon."))
                 .background(Theme.background)
                 .navigationTitle(title)
-        }
-    }
-}
-
-private struct AccountPlaceholderView: View {
-    @Environment(SessionStore.self) private var session
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                if let user = session.user {
-                    Text("Hi, \(user.username)!")
-                        .font(Theme.heading(28))
-                        .foregroundStyle(Theme.ink)
-                    Text(user.email).foregroundStyle(.secondary)
-                }
-                Button("Log out", role: .destructive) { session.signOut() }
-                    .buttonStyle(.bordered)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.background)
-            .navigationTitle("Profile")
         }
     }
 }

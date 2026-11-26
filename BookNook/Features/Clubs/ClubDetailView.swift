@@ -196,7 +196,7 @@ struct ClubDetailView: View {
                 ForEach(Array(sortedMembers(club).enumerated()), id: \.element.id) { index, member in
                     if index > 0 { Divider() }
                     HStack(spacing: 12) {
-                        AvatarView(urlString: nil, name: member.username, size: 34)
+                        AvatarView(urlString: member.avatarUrl, name: member.username, size: 34)
                         Text(member.username)
                             .foregroundStyle(Theme.ink)
                         if member.id == session.user?.id {

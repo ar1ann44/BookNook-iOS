@@ -390,12 +390,13 @@ app.get('/clubs/:id', requireAuth, (req, res) => {
 
   const members = db
     .prepare(
-      `SELECT users.id, users.username, club_members.role
+      `SELECT users.id, users.username, users.avatar_url, club_members.role
        FROM club_members
        JOIN users ON users.id = club_members.user_id
        WHERE club_members.club_id = ?`,
     )
     .all(club.id)
+    .map(({ avatar_url, ...member }) => ({ ...member, avatarUrl: toPublicPath(avatar_url) }))
 
   const extra = { members, role: membership ? membership.role : null }
 
@@ -553,6 +554,7 @@ app.get('/me/activity', requireAuth, (req, res) => {
               club_messages.content,
               club_messages.created_at,
               users.username,
+              users.avatar_url,
               clubs.id AS club_id,
               clubs.name AS club_name
        FROM club_messages
@@ -572,6 +574,7 @@ app.get('/me/activity', requireAuth, (req, res) => {
       content: row.content,
       createdAt: row.created_at,
       username: row.username,
+      avatarUrl: toPublicPath(row.avatar_url),
       clubId: row.club_id,
       clubName: row.club_name,
     })),
@@ -669,7 +672,7 @@ app.get('/clubs/:id/channels/:channelId/messages', requireAuth, (req, res) => {
   const rows = db
     .prepare(
       `SELECT club_messages.id, club_messages.content, club_messages.created_at,
-              club_messages.user_id, users.username
+              club_messages.user_id, users.username, users.avatar_url
        FROM club_messages
        JOIN users ON users.id = club_messages.user_id
        WHERE club_messages.channel_id = ? AND club_messages.id > ?
@@ -686,6 +689,7 @@ app.get('/clubs/:id/channels/:channelId/messages', requireAuth, (req, res) => {
       createdAt: row.created_at,
       userId: row.user_id,
       username: row.username,
+      avatarUrl: toPublicPath(row.avatar_url),
     })),
   )
 })
@@ -717,7 +721,7 @@ app.post('/clubs/:id/channels/:channelId/messages', requireAuth, (req, res) => {
   const row = db
     .prepare(
       `SELECT club_messages.id, club_messages.content, club_messages.created_at,
-              club_messages.user_id, users.username
+              club_messages.user_id, users.username, users.avatar_url
        FROM club_messages
        JOIN users ON users.id = club_messages.user_id
        WHERE club_messages.id = ?`,
@@ -730,6 +734,7 @@ app.post('/clubs/:id/channels/:channelId/messages', requireAuth, (req, res) => {
     createdAt: row.created_at,
     userId: row.user_id,
     username: row.username,
+    avatarUrl: toPublicPath(row.avatar_url),
   })
 })
 

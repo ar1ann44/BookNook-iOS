@@ -91,7 +91,7 @@ struct AvatarView: View {
                 ZStack {
                     Theme.moss
                     Text(name.prefix(1).uppercased())
-                        .font(Theme.heading(size * 0.4))
+                        .font(.system(size: size * 0.4, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
                 }
             }

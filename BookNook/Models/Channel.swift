@@ -20,6 +20,7 @@ struct ChatMessage: Codable, Identifiable, Hashable {
     let createdAt: String
     let userId: Int
     let username: String
+    var avatarUrl: String?
 }
 
 struct PollOption: Codable, Identifiable, Hashable {

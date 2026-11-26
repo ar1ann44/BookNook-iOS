@@ -236,7 +236,7 @@ private struct ActivityCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            AvatarView(urlString: nil, name: item.username, size: 38)
+            AvatarView(urlString: item.avatarUrl, name: item.username, size: 38)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(item.clubName)

@@ -9,8 +9,18 @@ enum Theme {
     static let midnight = Color(hex: 0x105666)
     static let locked = Color(hex: 0xDED9BD)
 
+    /// Serif headings that follow the user's Dynamic Type setting: the size
+    /// picks the closest text style, which iOS then scales.
     static func heading(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .semibold, design: .serif)
+        let style: Font.TextStyle
+        switch size {
+        case 32...: style = .largeTitle
+        case 26..<32: style = .title
+        case 22..<26: style = .title2
+        case 19..<22: style = .title3
+        default: style = .headline
+        }
+        return .system(style, design: .serif, weight: .semibold)
     }
 
     static let body = Font.system(.body, design: .serif)

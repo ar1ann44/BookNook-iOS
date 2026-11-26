@@ -18,6 +18,7 @@ struct ClubMember: Codable, Identifiable, Hashable {
     let id: Int
     let username: String
     let role: ClubRole
+    var avatarUrl: String?
 }
 
 struct Club: Codable, Identifiable, Hashable {

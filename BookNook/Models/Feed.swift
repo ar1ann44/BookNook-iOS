@@ -5,6 +5,7 @@ struct ActivityItem: Codable, Identifiable, Hashable {
     let content: String
     let createdAt: String
     let username: String
+    var avatarUrl: String?
     let clubId: Int
     let clubName: String
 }

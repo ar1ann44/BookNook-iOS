@@ -146,7 +146,24 @@ private struct MessageBubble: View {
     let isMine: Bool
     let showsAuthor: Bool
 
+    private static let avatarSize: CGFloat = 30
+
     var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if !isMine {
+                if showsAuthor {
+                    AvatarView(urlString: message.avatarUrl, name: message.username, size: Self.avatarSize)
+                } else {
+                    Color.clear.frame(width: Self.avatarSize, height: 1)
+                }
+            }
+            bubble
+        }
+        .frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)
+        .padding(isMine ? .leading : .trailing, 48)
+    }
+
+    private var bubble: some View {
         VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
             if showsAuthor {
                 HStack(spacing: 6) {
@@ -171,7 +188,5 @@ private struct MessageBubble: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 .textSelection(.enabled)
         }
-        .frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)
-        .padding(isMine ? .leading : .trailing, 48)
     }
 }

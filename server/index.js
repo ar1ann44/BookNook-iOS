@@ -139,6 +139,51 @@ app.get('/api/books/search', async (req, res) => {
   }
 })
 
+const RECOMMENDATION_GENRES = 3
+const BOOKS_PER_GENRE = 8
+const FALLBACK_GENRES = ['Classics', 'Fantasy', 'Mystery']
+
+// Book suggestions grouped by the user's favorite genres (or a few popular
+// genres when the profile has none). Books already in their top 4 are skipped.
+app.get('/api/books/recommendations', requireAuth, async (req, res) => {
+  const row = db.prepare('SELECT genres, top_books FROM users WHERE id = ?').get(req.userId)
+
+  if (!row) {
+    return res.status(404).json({ error: 'User not found.' })
+  }
+
+  const favoriteGenres = row.genres ? JSON.parse(row.genres) : []
+  const topBooks = row.top_books ? JSON.parse(row.top_books) : []
+  const basedOnProfile = favoriteGenres.length > 0
+  const genres = (basedOnProfile ? favoriteGenres : FALLBACK_GENRES).slice(0, RECOMMENDATION_GENRES)
+
+  const alreadyFavorite = new Set(topBooks.map((book) => book.title.toLowerCase()))
+  const seen = new Set()
+
+  try {
+    const results = await Promise.all(
+      genres.map((genre) => searchGoogleBooks(`subject:"${genre}"`, BOOKS_PER_GENRE)),
+    )
+
+    const sections = genres
+      .map((genre, index) => ({
+        genre,
+        books: results[index].filter((book) => {
+          const key = book.title.toLowerCase()
+          if (alreadyFavorite.has(key) || seen.has(book.id)) return false
+          seen.add(book.id)
+          return true
+        }),
+      }))
+      .filter((section) => section.books.length > 0)
+
+    res.json({ basedOnProfile, sections })
+  } catch (err) {
+    console.error('Recommendations failed:', err.message)
+    res.status(502).json({ error: 'Could not reach Google Books.' })
+  }
+})
+
 // Avatars are stored as a path ("/uploads/..."), so any device can build the
 // full URL from the server address it is using. Older rows saved a
 // localhost URL, which is trimmed here.
@@ -509,9 +554,9 @@ app.get('/me/activity', requireAuth, (req, res) => {
        JOIN users ON users.id = club_messages.user_id
        WHERE club_channels.type = 'general'
        ORDER BY club_messages.created_at DESC, club_messages.id DESC
-       LIMIT 3`,
+       LIMIT ?`,
     )
-    .all(req.userId)
+    .all(req.userId, Math.min(Math.max(Number(req.query.limit) || 3, 1), 20))
 
   res.json(
     rows.map((row) => ({

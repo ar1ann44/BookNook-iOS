@@ -37,7 +37,7 @@ app.post('/signup', async (req, res) => {
   const { username, email, password } = req.body
 
   if (!username || !email || !password) {
-    return res.status(400).json({ error: 'Username, email and password are required.' })
+    return res.status(400).json({ error: 'El nombre de usuario, el correo y la contraseña son obligatorios.' })
   }
 
   const existingUser = db
@@ -45,7 +45,7 @@ app.post('/signup', async (req, res) => {
     .get(username, email)
 
   if (existingUser) {
-    return res.status(400).json({ error: 'Username or email is already registered.' })
+    return res.status(400).json({ error: 'Ese nombre de usuario o correo ya está registrado.' })
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
@@ -64,19 +64,19 @@ app.post('/login', async (req, res) => {
   const { email, password } = req.body
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required.' })
+    return res.status(400).json({ error: 'El correo y la contraseña son obligatorios.' })
   }
 
   const row = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
 
   if (!row) {
-    return res.status(401).json({ error: 'Invalid email or password.' })
+    return res.status(401).json({ error: 'Correo o contraseña incorrectos.' })
   }
 
   const passwordMatches = await bcrypt.compare(password, row.password_hash)
 
   if (!passwordMatches) {
-    return res.status(401).json({ error: 'Invalid email or password.' })
+    return res.status(401).json({ error: 'Correo o contraseña incorrectos.' })
   }
 
   const user = { id: row.id, username: row.username, email: row.email }
@@ -135,7 +135,7 @@ app.get('/api/books/search', async (req, res) => {
     res.json(await searchGoogleBooks(q, Number(req.query.limit) || 10))
   } catch (err) {
     console.error('Book search failed:', err.message)
-    res.status(502).json({ error: 'Could not reach Google Books.' })
+    res.status(502).json({ error: 'No se pudo conectar con Google Books.' })
   }
 })
 
@@ -149,7 +149,7 @@ app.get('/api/books/recommendations', requireAuth, async (req, res) => {
   const row = db.prepare('SELECT genres, top_books FROM users WHERE id = ?').get(req.userId)
 
   if (!row) {
-    return res.status(404).json({ error: 'User not found.' })
+    return res.status(404).json({ error: 'No se encontró el usuario.' })
   }
 
   const favoriteGenres = row.genres ? JSON.parse(row.genres) : []
@@ -175,12 +175,20 @@ app.get('/api/books/recommendations', requireAuth, async (req, res) => {
           return true
         }),
       }))
+      // Books with a cover first; the rest stay at the end of the row.
+      .map((section) => ({
+        ...section,
+        books: [
+          ...section.books.filter((book) => book.coverUrl),
+          ...section.books.filter((book) => !book.coverUrl),
+        ],
+      }))
       .filter((section) => section.books.length > 0)
 
     res.json({ basedOnProfile, sections })
   } catch (err) {
     console.error('Recommendations failed:', err.message)
-    res.status(502).json({ error: 'Could not reach Google Books.' })
+    res.status(502).json({ error: 'No se pudo conectar con Google Books.' })
   }
 })
 
@@ -206,7 +214,7 @@ app.get('/profile', requireAuth, (req, res) => {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId)
 
   if (!row) {
-    return res.status(404).json({ error: 'User not found.' })
+    return res.status(404).json({ error: 'No se encontró el usuario.' })
   }
 
   res.json(toProfileResponse(row))
@@ -216,11 +224,11 @@ app.put('/profile', requireAuth, (req, res) => {
   const { bio, genres, topBooks } = req.body
 
   if (!Array.isArray(genres)) {
-    return res.status(400).json({ error: 'genres must be an array.' })
+    return res.status(400).json({ error: 'Los géneros deben enviarse como lista.' })
   }
 
   if (!Array.isArray(topBooks) || topBooks.length > 4) {
-    return res.status(400).json({ error: 'topBooks must be an array of at most 4 books.' })
+    return res.status(400).json({ error: 'Puedes elegir como máximo 4 libros favoritos.' })
   }
 
   db.prepare('UPDATE users SET bio = ?, genres = ?, top_books = ? WHERE id = ?').run(
@@ -236,7 +244,7 @@ app.put('/profile', requireAuth, (req, res) => {
 
 app.post('/profile/avatar', requireAuth, upload.single('avatar'), (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No image file was uploaded.' })
+    return res.status(400).json({ error: 'No se recibió ninguna imagen.' })
   }
 
   const avatarUrl = `/uploads/${req.file.filename}`
@@ -282,11 +290,11 @@ app.post('/clubs', requireAuth, (req, res) => {
   const { name, description, privacy, currentBook } = req.body
 
   if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Club name is required.' })
+    return res.status(400).json({ error: 'El nombre del club es obligatorio.' })
   }
 
   if (privacy !== 'private' && privacy !== 'public') {
-    return res.status(400).json({ error: 'privacy must be "private" or "public".' })
+    return res.status(400).json({ error: 'La privacidad debe ser "private" o "public".' })
   }
 
   const inviteCode = privacy === 'private' ? generateUniqueInviteCode() : null
@@ -369,7 +377,7 @@ app.get('/clubs/:id', requireAuth, (req, res) => {
   const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id)
 
   if (!club) {
-    return res.status(404).json({ error: 'Club not found.' })
+    return res.status(404).json({ error: 'No se encontró el club.' })
   }
 
   const membership = db
@@ -377,7 +385,7 @@ app.get('/clubs/:id', requireAuth, (req, res) => {
     .get(club.id, req.userId)
 
   if (club.privacy === 'private' && !membership) {
-    return res.status(403).json({ error: 'This club is private.' })
+    return res.status(403).json({ error: 'Este club es privado.' })
   }
 
   const members = db
@@ -404,11 +412,11 @@ app.post('/clubs/:id/join', requireAuth, (req, res) => {
   const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id)
 
   if (!club) {
-    return res.status(404).json({ error: 'Club not found.' })
+    return res.status(404).json({ error: 'No se encontró el club.' })
   }
 
   if (club.privacy !== 'public') {
-    return res.status(403).json({ error: 'This club is private.' })
+    return res.status(403).json({ error: 'Este club es privado.' })
   }
 
   const existingMembership = db
@@ -416,7 +424,7 @@ app.post('/clubs/:id/join', requireAuth, (req, res) => {
     .get(club.id, req.userId)
 
   if (existingMembership) {
-    return res.status(400).json({ error: 'You are already a member of this club.' })
+    return res.status(400).json({ error: 'Ya eres miembro de este club.' })
   }
 
   db.prepare('INSERT INTO club_members (club_id, user_id, role) VALUES (?, ?, ?)').run(
@@ -432,7 +440,7 @@ app.post('/clubs/join-by-code', requireAuth, (req, res) => {
   const { code } = req.body
 
   if (!code || !code.trim()) {
-    return res.status(400).json({ error: 'An invite code is required.' })
+    return res.status(400).json({ error: 'Escribe un código de invitación.' })
   }
 
   const club = db
@@ -440,7 +448,7 @@ app.post('/clubs/join-by-code', requireAuth, (req, res) => {
     .get(code.trim())
 
   if (!club) {
-    return res.status(404).json({ error: 'No club found with that code. Double check and try again.' })
+    return res.status(404).json({ error: 'No hay ningún club con ese código. Revísalo e inténtalo de nuevo.' })
   }
 
   const existingMembership = db
@@ -448,7 +456,7 @@ app.post('/clubs/join-by-code', requireAuth, (req, res) => {
     .get(club.id, req.userId)
 
   if (existingMembership) {
-    return res.json({ id: club.id, message: 'You are already a member of this club.' })
+    return res.json({ id: club.id, message: 'Ya eres miembro de este club.' })
   }
 
   db.prepare('INSERT INTO club_members (club_id, user_id, role) VALUES (?, ?, ?)').run(
@@ -471,7 +479,7 @@ function requireMembership(req, res) {
   const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id)
 
   if (!club) {
-    res.status(404).json({ error: 'Club not found.' })
+    res.status(404).json({ error: 'No se encontró el club.' })
     return null
   }
 
@@ -480,7 +488,7 @@ function requireMembership(req, res) {
     .get(club.id, req.userId)
 
   if (!membership) {
-    res.status(403).json({ error: 'You are not a member of this club.' })
+    res.status(403).json({ error: 'No eres miembro de este club.' })
     return null
   }
 
@@ -594,13 +602,13 @@ app.post('/clubs/:id/channels', requireAuth, (req, res) => {
   if (!access) return
 
   if (access.membership.role !== 'admin') {
-    return res.status(403).json({ error: 'Only club admins can create a channel.' })
+    return res.status(403).json({ error: 'Solo los administradores pueden crear canales.' })
   }
 
   const { name } = req.body
 
   if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'A channel name is required.' })
+    return res.status(400).json({ error: 'El nombre del canal es obligatorio.' })
   }
 
   const result = db
@@ -617,7 +625,7 @@ app.delete('/clubs/:id/members/:userId', requireAuth, (req, res) => {
   if (!access) return
 
   if (access.membership.role !== 'admin') {
-    return res.status(403).json({ error: 'Only club admins can remove members.' })
+    return res.status(403).json({ error: 'Solo los administradores pueden quitar miembros.' })
   }
 
   const targetUserId = Number(req.params.userId)
@@ -625,7 +633,7 @@ app.delete('/clubs/:id/members/:userId', requireAuth, (req, res) => {
   // Removing yourself would leave the club without the admin who owns it;
   // that needs a role-transfer flow we have not built yet.
   if (targetUserId === req.userId) {
-    return res.status(400).json({ error: 'You cannot remove yourself from a club you admin.' })
+    return res.status(400).json({ error: 'No puedes quitarte de un club que administras.' })
   }
 
   const targetMembership = db
@@ -633,7 +641,7 @@ app.delete('/clubs/:id/members/:userId', requireAuth, (req, res) => {
     .get(access.club.id, targetUserId)
 
   if (!targetMembership) {
-    return res.status(404).json({ error: 'That user is not a member of this club.' })
+    return res.status(404).json({ error: 'Ese usuario no es miembro de este club.' })
   }
 
   db.prepare('DELETE FROM club_members WHERE club_id = ? AND user_id = ?').run(
@@ -651,11 +659,11 @@ app.get('/clubs/:id/channels/:channelId/messages', requireAuth, (req, res) => {
   const channel = getChannelForClub(access.club.id, req.params.channelId)
 
   if (!channel) {
-    return res.status(404).json({ error: 'Channel not found.' })
+    return res.status(404).json({ error: 'No se encontró el canal.' })
   }
 
   if (channel.type !== 'general') {
-    return res.status(400).json({ error: 'This channel does not hold messages.' })
+    return res.status(400).json({ error: 'Este canal no admite mensajes.' })
   }
 
   const rows = db
@@ -689,17 +697,17 @@ app.post('/clubs/:id/channels/:channelId/messages', requireAuth, (req, res) => {
   const channel = getChannelForClub(access.club.id, req.params.channelId)
 
   if (!channel) {
-    return res.status(404).json({ error: 'Channel not found.' })
+    return res.status(404).json({ error: 'No se encontró el canal.' })
   }
 
   if (channel.type !== 'general') {
-    return res.status(400).json({ error: 'This channel does not hold messages.' })
+    return res.status(400).json({ error: 'Este canal no admite mensajes.' })
   }
 
   const { content } = req.body
 
   if (!content || !content.trim()) {
-    return res.status(400).json({ error: 'Message content is required.' })
+    return res.status(400).json({ error: 'El mensaje no puede estar vacío.' })
   }
 
   const result = db
@@ -730,21 +738,21 @@ app.post('/clubs/:id/polls', requireAuth, (req, res) => {
   if (!access) return
 
   if (access.membership.role !== 'admin') {
-    return res.status(403).json({ error: 'Only club admins can create a poll.' })
+    return res.status(403).json({ error: 'Solo los administradores pueden crear encuestas.' })
   }
 
   const { question, options } = req.body
 
   if (!question || !question.trim()) {
-    return res.status(400).json({ error: 'A poll question is required.' })
+    return res.status(400).json({ error: 'La pregunta de la encuesta es obligatoria.' })
   }
 
   if (!Array.isArray(options) || options.length < 2 || options.length > 4) {
-    return res.status(400).json({ error: 'A poll needs between 2 and 4 books.' })
+    return res.status(400).json({ error: 'Una encuesta necesita entre 2 y 4 libros.' })
   }
 
   if (options.some((option) => !option || !option.title || !option.author)) {
-    return res.status(400).json({ error: 'Every poll option needs a title and an author.' })
+    return res.status(400).json({ error: 'Cada opción de la encuesta necesita título y autor.' })
   }
 
   const createPoll = db.transaction(() => {
@@ -798,7 +806,7 @@ app.get('/clubs/:id/polls/:pollId', requireAuth, (req, res) => {
     .get(req.params.pollId, access.club.id)
 
   if (!poll) {
-    return res.status(404).json({ error: 'Poll not found.' })
+    return res.status(404).json({ error: 'No se encontró la encuesta.' })
   }
 
   res.json(readPoll(poll, req.userId))
@@ -818,7 +826,7 @@ app.post('/clubs/:id/polls/:pollId/vote', requireAuth, (req, res) => {
     .get(req.params.pollId, access.club.id)
 
   if (!poll) {
-    return res.status(404).json({ error: 'Poll not found.' })
+    return res.status(404).json({ error: 'No se encontró la encuesta.' })
   }
 
   const { optionId } = req.body
@@ -828,7 +836,7 @@ app.post('/clubs/:id/polls/:pollId/vote', requireAuth, (req, res) => {
     .get(optionId, poll.id)
 
   if (!option) {
-    return res.status(400).json({ error: 'That option does not belong to this poll.' })
+    return res.status(400).json({ error: 'Esa opción no pertenece a esta encuesta.' })
   }
 
   // One vote per user per poll — voting again moves the existing vote.

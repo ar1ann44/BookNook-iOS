@@ -15,15 +15,15 @@ struct ServerSettingsView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 } header: {
-                    Text("Server address")
+                    Text("Dirección del servidor")
                 } footer: {
-                    Text("In the simulator use http://localhost:4000. On your iPhone use your Mac's local IP address (System Settings › Wi‑Fi › Details) and keep both on the same Wi‑Fi network.")
+                    Text("En el simulador usa http://localhost:4000. En tu iPhone usa la IP local de tu Mac (Ajustes del Sistema › Wi‑Fi › Detalles) y mantén ambos en la misma red Wi‑Fi.")
                 }
 
                 Section {
                     Button(action: check) {
                         HStack {
-                            Text("Test connection")
+                            Text("Probar conexión")
                             Spacer()
                             if isChecking { ProgressView() }
                         }
@@ -33,14 +33,14 @@ struct ServerSettingsView: View {
                     }
                 }
             }
-            .navigationTitle("Server")
+            .navigationTitle("Servidor")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button("Guardar") {
                         ServerConfig.baseURLString = address
                         dismiss()
                     }
@@ -61,7 +61,7 @@ struct ServerSettingsView: View {
             }
             do {
                 let _: [Book] = try await APIClient.shared.request(.get, "api/books/search", authorized: false)
-                status = "✅ Connected to the server."
+                status = "✅ Conectado al servidor."
             } catch {
                 status = "❌ \(error.localizedDescription)"
             }

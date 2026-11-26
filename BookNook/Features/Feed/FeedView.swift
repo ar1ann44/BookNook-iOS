@@ -35,7 +35,7 @@ struct FeedView: View {
             }
             .background(Theme.background.ignoresSafeArea())
             .overlay { if !hasLoaded { ProgressView() } }
-            .navigationTitle("Feed")
+            .navigationTitle("Inicio")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Int.self) { clubId in
                 ClubDetailView(clubId: clubId, onChange: { Task { await load() } })
@@ -52,10 +52,10 @@ struct FeedView: View {
 
     private var greeting: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Hi, \(session.user?.username ?? "reader")")
+            Text("Hola, \(session.user?.username ?? "lector")")
                 .font(Theme.heading(30))
                 .foregroundStyle(Theme.ink)
-            Text("Here's what's happening in your book clubs.")
+            Text("Esto es lo que pasa en tus clubes de lectura.")
                 .font(Theme.body)
                 .foregroundStyle(Theme.midnight)
         }
@@ -65,11 +65,11 @@ struct FeedView: View {
     @ViewBuilder
     private var activitySection: some View {
         if hasLoaded {
-            FeedSection(title: "Recent messages", systemImage: "bubble.left.and.bubble.right") {
+            FeedSection(title: "Mensajes recientes", systemImage: "bubble.left.and.bubble.right") {
                 if myClubCount == 0 {
-                    EmptyCard(text: "Join a club to see its latest conversations here.")
+                    EmptyCard(text: "Únete a un club para ver aquí sus conversaciones más recientes.")
                 } else if activity.isEmpty {
-                    EmptyCard(text: "No messages yet. Start the conversation in one of your clubs!")
+                    EmptyCard(text: "Aún no hay mensajes. ¡Empieza la conversación en uno de tus clubes!")
                 } else {
                     VStack(spacing: 10) {
                         ForEach(activity) { item in
@@ -88,7 +88,7 @@ struct FeedView: View {
     @ViewBuilder
     private var discoverSection: some View {
         if !discover.isEmpty {
-            FeedSection(title: "Clubs to discover", systemImage: "sparkles", titleInset: 20) {
+            FeedSection(title: "Clubes para descubrir", systemImage: "sparkles", titleInset: 20) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(discover) { club in
@@ -110,10 +110,10 @@ struct FeedView: View {
     @ViewBuilder
     private var recommendationsSection: some View {
         if let recommendations, !recommendations.sections.isEmpty {
-            FeedSection(title: "Recommended books", systemImage: "books.vertical", titleInset: 20) {
+            FeedSection(title: "Libros recomendados", systemImage: "books.vertical", titleInset: 20) {
                 VStack(alignment: .leading, spacing: 18) {
                     if !recommendations.basedOnProfile {
-                        Text("Add favorite genres to your profile to get recommendations picked for you.")
+                        Text("Agrega tus géneros favoritos en tu perfil para recibir recomendaciones hechas para ti.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 20)
@@ -121,8 +121,8 @@ struct FeedView: View {
                     ForEach(recommendations.sections) { section in
                         VStack(alignment: .leading, spacing: 8) {
                             Text(recommendations.basedOnProfile
-                                 ? "Because you like \(section.genre)"
-                                 : "Popular in \(section.genre)")
+                                 ? "Porque te gusta \(Genres.label(section.genre))"
+                                 : "Populares en \(Genres.label(section.genre))")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Theme.midnight)
                                 .padding(.horizontal, 20)
@@ -275,20 +275,20 @@ private struct DiscoverClubCard: View {
             Button(action: onOpen) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .top, spacing: 10) {
-                        BookCoverView(urlString: club.currentBook?.coverUrl, width: 46)
+                        BookCoverView(urlString: club.currentBook?.coverUrl, title: club.currentBook?.title, author: club.currentBook?.author, width: 46)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(club.name)
                                 .font(Theme.body.weight(.semibold))
                                 .foregroundStyle(Theme.ink)
                                 .lineLimit(2)
                             if let count = club.memberCount {
-                                Text("\(count) \(count == 1 ? "member" : "members")")
+                                Text("\(count) \(count == 1 ? "miembro" : "miembros")")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
                     }
-                    Text(club.currentBook.map { "Reading \($0.title)" } ?? club.description)
+                    Text(club.currentBook.map { "Leyendo \($0.title)" } ?? club.description)
                         .font(.caption)
                         .foregroundStyle(Theme.midnight)
                         .lineLimit(2)
@@ -301,7 +301,7 @@ private struct DiscoverClubCard: View {
 
             Button(action: onJoin) {
                 Group {
-                    if isJoining { ProgressView().tint(.white) } else { Text("Join") }
+                    if isJoining { ProgressView().tint(.white) } else { Text("Unirme") }
                 }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white)
@@ -324,7 +324,7 @@ private struct RecommendedBookTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            BookCoverView(urlString: book.coverUrl, width: 96)
+            BookCoverView(urlString: book.coverUrl, title: book.title, author: book.author, width: 96)
             Text(book.title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Theme.ink)
@@ -346,7 +346,7 @@ struct BookDetailSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    BookCoverView(urlString: book.coverUrl, width: 140)
+                    BookCoverView(urlString: book.coverUrl, title: book.title, author: book.author, width: 140)
                         .shadow(radius: 6, y: 3)
                     VStack(spacing: 4) {
                         Text(book.title)
@@ -371,7 +371,7 @@ struct BookDetailSheet: View {
                             .foregroundStyle(Theme.ink)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
-                        Text("No description available.")
+                        Text("Sin descripción disponible.")
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -380,7 +380,7 @@ struct BookDetailSheet: View {
             .background(Theme.background.ignoresSafeArea())
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Listo") { dismiss() }
                 }
             }
         }

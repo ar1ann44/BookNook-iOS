@@ -21,9 +21,9 @@ struct ChannelChatView: View {
                 LazyVStack(spacing: 6) {
                     if !isLoading && messages.isEmpty {
                         ContentUnavailableView(
-                            "No messages yet",
+                            "Aún no hay mensajes",
                             systemImage: "bubble.left.and.bubble.right",
-                            description: Text("Say hi to the club!")
+                            description: Text("¡Saluda al club!")
                         )
                         .padding(.top, 60)
                     }
@@ -64,7 +64,7 @@ struct ChannelChatView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack(alignment: .bottom, spacing: 8) {
-                TextField("Message #\(channel.name)", text: $draft, axis: .vertical)
+                TextField("Mensaje en #\(channel.name)", text: $draft, axis: .vertical)
                     .lineLimit(1...5)
                     .focused($inputFocused)
                     .padding(.horizontal, 14)
@@ -79,7 +79,7 @@ struct ChannelChatView: View {
                         .foregroundStyle(canSend ? Theme.rosy : Theme.locked)
                 }
                 .disabled(!canSend)
-                .accessibilityLabel("Send")
+                .accessibilityLabel("Enviar")
             }
         }
         .padding(.horizontal, 12)

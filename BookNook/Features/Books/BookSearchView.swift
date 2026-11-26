@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Sheet that searches Google Books through the server and returns the chosen book.
 struct BookSearchView: View {
-    var title = "Find a book"
+    var title = "Buscar un libro"
     let onSelect: (Book) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -35,18 +35,18 @@ struct BookSearchView: View {
                     ProgressView()
                 } else if results.isEmpty, errorMessage == nil {
                     ContentUnavailableView(
-                        query.isEmpty ? "Search by title or author" : "No books found",
+                        query.isEmpty ? "Busca por título o autor" : "No se encontraron libros",
                         systemImage: "magnifyingglass"
                     )
                 }
             }
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Title, author or ISBN")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Título, autor o ISBN")
             .task(id: query) { await search() }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
             }
         }
@@ -82,7 +82,7 @@ struct BookRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            BookCoverView(urlString: book.coverUrl, width: 44)
+            BookCoverView(urlString: book.coverUrl, title: book.title, author: book.author, width: 44)
             VStack(alignment: .leading, spacing: 4) {
                 Text(book.title)
                     .font(Theme.body.weight(.semibold))

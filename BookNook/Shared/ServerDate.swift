@@ -21,7 +21,7 @@ enum ServerDate {
             return date.formatted(date: .omitted, time: .shortened)
         }
         if Calendar.current.isDateInYesterday(date) {
-            return "Yesterday " + date.formatted(date: .omitted, time: .shortened)
+            return "Ayer " + date.formatted(date: .omitted, time: .shortened)
         }
         return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
     }

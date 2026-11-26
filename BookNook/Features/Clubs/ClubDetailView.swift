@@ -16,36 +16,38 @@ struct ClubDetailView: View {
     @State private var showingNewPoll = false
 
     var body: some View {
-        List {
+        ScrollView {
             if let club {
-                header(club)
-                if let book = club.currentBook {
-                    Section("Currently reading") {
-                        BookRow(book: book)
+                VStack(alignment: .leading, spacing: 16) {
+                    header(club)
+                    if let book = club.currentBook {
+                        SectionCard(title: "Leyendo ahora") {
+                            BookRow(book: book)
+                        }
                     }
-                }
-                if club.isAdmin, let code = club.inviteCode {
-                    inviteSection(code: code, clubName: club.name)
-                }
-                if let errorMessage {
-                    Section {
-                        Text(errorMessage).font(.footnote).foregroundStyle(.red)
+                    if club.isAdmin, let code = club.inviteCode {
+                        inviteCard(code: code, clubName: club.name)
                     }
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                    channelsCard(club)
+                    membersCard(club)
                 }
-                channelsSection(club)
-                membersSection(club)
+                .padding(20)
             } else if let errorMessage {
                 ContentUnavailableView {
-                    Label("Could not open this club", systemImage: "exclamationmark.triangle")
+                    Label("No se pudo abrir el club", systemImage: "exclamationmark.triangle")
                 } description: {
                     Text(errorMessage)
                 } actions: {
-                    Button("Try again") { Task { await load() } }
+                    Button("Reintentar") { Task { await load() } }
                 }
-                .listRowBackground(Color.clear)
+                .padding(.top, 60)
             }
         }
-        .scrollContentBackground(.hidden)
         .background(Theme.background.ignoresSafeArea())
         .overlay {
             if club == nil && errorMessage == nil { ProgressView() }
@@ -58,25 +60,25 @@ struct ClubDetailView: View {
             if club?.isAdmin == true {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button("New channel", systemImage: "number") {
+                        Button("Nuevo canal", systemImage: "number") {
                             newChannelName = ""
                             showingNewChannel = true
                         }
-                        Button("New book poll", systemImage: "chart.bar") { showingNewPoll = true }
+                        Button("Nueva encuesta", systemImage: "chart.bar") { showingNewPoll = true }
                     } label: {
                         Image(systemName: "plus.circle")
                     }
-                    .accessibilityLabel("Admin tools")
+                    .accessibilityLabel("Herramientas de administrador")
                 }
             }
         }
-        .alert("New channel", isPresented: $showingNewChannel) {
-            TextField("Channel name", text: $newChannelName)
+        .alert("Nuevo canal", isPresented: $showingNewChannel) {
+            TextField("Nombre del canal", text: $newChannelName)
                 .textInputAutocapitalization(.never)
-            Button("Cancel", role: .cancel) {}
-            Button("Create") { createChannel() }
+            Button("Cancelar", role: .cancel) {}
+            Button("Crear") { createChannel() }
         } message: {
-            Text("Members will be able to chat in it right away.")
+            Text("Los miembros podrán escribir en él de inmediato.")
         }
         .sheet(isPresented: $showingNewPoll) {
             CreatePollView(clubId: clubId) { response in
@@ -84,7 +86,7 @@ struct ClubDetailView: View {
             }
         }
         .confirmationDialog(
-            "Remove \(memberToRemove?.username ?? "")?",
+            "¿Quitar a \(memberToRemove?.username ?? "")?",
             isPresented: Binding(
                 get: { memberToRemove != nil },
                 set: { if !$0 { memberToRemove = nil } }
@@ -92,43 +94,44 @@ struct ClubDetailView: View {
             titleVisibility: .visible,
             presenting: memberToRemove
         ) { member in
-            Button("Remove from club", role: .destructive) { remove(member) }
+            Button("Quitar del club", role: .destructive) { remove(member) }
         } message: { _ in
-            Text("They will lose access to the club's channels. They can join again if the club is public or if they have the invite code.")
+            Text("Perderá acceso a los canales del club. Podrá volver a unirse si el club es público o si tiene el código de invitación.")
         }
     }
+
+    // MARK: Cards
 
     private func header(_ club: Club) -> some View {
-        Section {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Label(club.privacy.label, systemImage: club.privacy.systemImage)
-                    if let count = club.members?.count {
-                        Label("\(count) \(count == 1 ? "member" : "members")", systemImage: "person.2")
-                    }
-                    if club.isAdmin {
-                        Label("You're an admin", systemImage: "star.fill")
-                    }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Pill(text: club.privacy.label, systemImage: club.privacy.systemImage)
+                if let count = club.members?.count {
+                    Pill(text: "\(count) \(count == 1 ? "miembro" : "miembros")", systemImage: "person.2")
                 }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Theme.midnight)
-
-                Text(club.name)
-                    .font(Theme.heading(28))
-                    .foregroundStyle(Theme.ink)
-
-                if !club.description.isEmpty {
-                    Text(club.description)
-                        .font(Theme.body)
-                        .foregroundStyle(Theme.ink.opacity(0.8))
+                if club.isAdmin {
+                    Pill(text: "Admin", systemImage: "star.fill")
                 }
             }
-            .padding(.vertical, 6)
+
+            Text(club.name)
+                .font(Theme.heading(28))
+                .foregroundStyle(Theme.ink)
+
+            if !club.description.isEmpty {
+                Text(club.description)
+                    .font(Theme.body)
+                    .foregroundStyle(Theme.ink.opacity(0.8))
+            }
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    private func inviteSection(code: String, clubName: String) -> some View {
-        Section {
+    private func inviteCard(code: String, clubName: String) -> some View {
+        SectionCard(title: "Código de invitación") {
             HStack {
                 Text(code)
                     .font(.system(.title2, design: .monospaced).weight(.bold))
@@ -140,99 +143,86 @@ struct ClubDetailView: View {
                     copiedCode = true
                 } label: {
                     Image(systemName: copiedCode ? "checkmark" : "doc.on.doc")
+                        .frame(width: 36, height: 36)
                 }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Copy invite code")
-                ShareLink(item: "Join my book club \"\(clubName)\" on BookNook with the code \(code)") {
+                .accessibilityLabel("Copiar código")
+                ShareLink(item: "Únete a mi club de lectura \"\(clubName)\" en BookNook con el código \(code)") {
                     Image(systemName: "square.and.arrow.up")
+                        .frame(width: 36, height: 36)
                 }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Share invite code")
+                .accessibilityLabel("Compartir código")
             }
-        } header: {
-            Text("Invite code")
-        } footer: {
-            Text("Only admins can see this code. Share it with people you want in the club.")
+            Text("Solo los administradores ven este código. Compártelo con quien quieras invitar.")
+                .font(.footnote)
+                .foregroundStyle(Theme.ink.opacity(0.6))
         }
-    }
-
-    private func membersSection(_ club: Club) -> some View {
-        Section("Members") {
-            ForEach(sortedMembers(club)) { member in
-                HStack {
-                    AvatarView(urlString: nil, name: member.username, size: 34)
-                    Text(member.username)
-                        .foregroundStyle(Theme.ink)
-                    if member.id == session.user?.id {
-                        Text("(you)").foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if member.role == .admin {
-                        Text("Admin")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.midnight)
-                    }
-                }
-                .swipeActions {
-                    if canRemove(member, in: club) {
-                        Button("Remove", role: .destructive) { memberToRemove = member }
-                    }
-                }
-                .contextMenu {
-                    if canRemove(member, in: club) {
-                        Button("Remove from club", systemImage: "person.badge.minus", role: .destructive) {
-                            memberToRemove = member
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func sortedMembers(_ club: Club) -> [ClubMember] {
-        (club.members ?? []).sorted {
-            if $0.role != $1.role { return $0.role == .admin }
-            return $0.username.localizedCaseInsensitiveCompare($1.username) == .orderedAscending
-        }
-    }
-
-    private func canRemove(_ member: ClubMember, in club: Club) -> Bool {
-        club.isAdmin && member.id != session.user?.id
     }
 
     @ViewBuilder
-    private func channelsSection(_ club: Club) -> some View {
-        Section {
+    private func channelsCard(_ club: Club) -> some View {
+        SectionCard(title: "Canales") {
             if club.role == nil {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Join this club to read and write in its channels.")
-                        .foregroundStyle(.secondary)
-                    Button(action: join) {
-                        if isJoining { ProgressView().tint(.white) } else { Text("Join club") }
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(isJoining)
+                Text("Únete a este club para leer y escribir en sus canales.")
+                    .foregroundStyle(Theme.ink.opacity(0.7))
+                Button(action: join) {
+                    if isJoining { ProgressView().tint(.white) } else { Text("Unirme al club") }
                 }
-                .padding(.vertical, 6)
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(isJoining)
             } else {
-                ForEach(channels) { channel in
-                    NavigationLink {
-                        destination(for: channel)
-                    } label: {
-                        Label {
-                            Text(channel.name).foregroundStyle(Theme.ink)
-                        } icon: {
-                            Image(systemName: channel.type == .poll ? "chart.bar.fill" : "number")
-                                .foregroundStyle(channel.type == .poll ? Theme.rosy : Theme.midnight)
+                VStack(spacing: 0) {
+                    ForEach(Array(channels.enumerated()), id: \.element.id) { index, channel in
+                        if index > 0 { Divider() }
+                        NavigationLink {
+                            destination(for: channel)
+                        } label: {
+                            ChannelRow(channel: channel)
                         }
+                        .buttonStyle(.plain)
                     }
+                }
+                if club.isAdmin {
+                    Text("Usa el botón + de arriba para crear un canal o una encuesta.")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.ink.opacity(0.6))
                 }
             }
-        } header: {
-            Text("Channels")
-        } footer: {
-            if club.isAdmin {
-                Text("Use the + button to add a channel or a book poll.")
+        }
+    }
+
+    private func membersCard(_ club: Club) -> some View {
+        SectionCard(title: "Miembros") {
+            VStack(spacing: 0) {
+                ForEach(Array(sortedMembers(club).enumerated()), id: \.element.id) { index, member in
+                    if index > 0 { Divider() }
+                    HStack(spacing: 12) {
+                        AvatarView(urlString: nil, name: member.username, size: 34)
+                        Text(member.username)
+                            .foregroundStyle(Theme.ink)
+                        if member.id == session.user?.id {
+                            Text("(tú)").foregroundStyle(Theme.ink.opacity(0.5))
+                        }
+                        Spacer()
+                        if member.role == .admin {
+                            Text("Admin")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.midnight)
+                        }
+                        if canRemove(member, in: club) {
+                            Menu {
+                                Button("Quitar del club", systemImage: "person.badge.minus", role: .destructive) {
+                                    memberToRemove = member
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .foregroundStyle(Theme.ink.opacity(0.6))
+                                    .frame(width: 32, height: 32)
+                            }
+                            .accessibilityLabel("Opciones para \(member.username)")
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
             }
         }
     }
@@ -245,6 +235,21 @@ struct ClubDetailView: View {
             ChannelChatView(clubId: clubId, channel: channel)
         }
     }
+
+    // MARK: Helpers
+
+    private func sortedMembers(_ club: Club) -> [ClubMember] {
+        (club.members ?? []).sorted {
+            if $0.role != $1.role { return $0.role == .admin }
+            return $0.username.localizedCaseInsensitiveCompare($1.username) == .orderedAscending
+        }
+    }
+
+    private func canRemove(_ member: ClubMember, in club: Club) -> Bool {
+        club.isAdmin && member.id != session.user?.id
+    }
+
+    // MARK: Data
 
     private func load() async {
         do {
@@ -295,5 +300,51 @@ struct ClubDetailView: View {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+}
+
+private struct ChannelRow: View {
+    let channel: Channel
+
+    private var isPoll: Bool { channel.type == .poll }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: isPoll ? "chart.bar.fill" : "number")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(isPoll ? Theme.rosy : Theme.midnight)
+                .frame(width: 32, height: 32)
+                .background((isPoll ? Theme.rosy : Theme.midnight).opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(channel.name)
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                Text(isPoll ? "Encuesta" : "Chat")
+                    .font(.caption)
+                    .foregroundStyle(Theme.ink.opacity(0.55))
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.ink.opacity(0.35))
+        }
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct Pill: View {
+    let text: String
+    let systemImage: String
+
+    var body: some View {
+        Label(text, systemImage: systemImage)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(Theme.midnight)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Theme.midnight.opacity(0.1))
+            .clipShape(Capsule())
     }
 }

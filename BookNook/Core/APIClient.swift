@@ -10,15 +10,15 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidServerURL:
-            return "The server address is not valid. Check it in Server settings."
+            return "La dirección del servidor no es válida. Revísala en la configuración del servidor."
         case .unauthorized(let message):
             return message
         case .server(_, let message):
             return message
         case .network:
-            return "Could not reach the BookNook server. Make sure it is running and the address is right."
+            return "No se pudo conectar con el servidor de BookNook. Revisa que esté encendido y que la dirección sea correcta."
         case .decoding:
-            return "The server sent a response the app could not read."
+            return "El servidor envió una respuesta que la app no pudo leer."
         }
     }
 }
@@ -127,7 +127,7 @@ final class APIClient {
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else {
             let message = (try? decoder.decode(ServerErrorBody.self, from: data))?.error
-                ?? "Something went wrong (error \(status))."
+                ?? "Algo salió mal (error \(status))."
             if status == 401 {
                 if authorized { await MainActor.run { onUnauthorized() } }
                 throw APIError.unauthorized(message)

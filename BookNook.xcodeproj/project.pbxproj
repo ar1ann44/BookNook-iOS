@@ -11,7 +11,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B00000000000000000000002 /* BookNook */ = {isa = PBXFileSystemSynchronizedRootGroup; path = BookNook; sourceTree = "<group>"; };
+		B00000000000000000000002 /* BookNook */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BookNook;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,10 +84,10 @@
 				};
 			};
 			buildConfigurationList = B00000000000000000000013 /* Build configuration list for PBXProject "BookNook" */;
-			developmentRegion = en;
+			developmentRegion = es;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				es,
 				Base,
 			);
 			mainGroup = B00000000000000000000004;
@@ -178,7 +182,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = BookNook;
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "BookNook uses your photo library so you can pick a profile picture.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "BookNook usa tu fototeca para que elijas tu foto de perfil.";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -208,7 +213,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = BookNook;
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "BookNook uses your photo library so you can pick a profile picture.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "BookNook usa tu fototeca para que elijas tu foto de perfil.";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

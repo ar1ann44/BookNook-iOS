@@ -45,8 +45,8 @@ struct EditProfileView: View {
                     .listRowBackground(Color.clear)
                 }
 
-                Section("Bio") {
-                    TextField("Tell other readers about yourself", text: $bio, axis: .vertical)
+                Section("Biografía") {
+                    TextField("Cuéntale a otros lectores sobre ti", text: $bio, axis: .vertical)
                         .lineLimit(3...6)
                 }
 
@@ -61,11 +61,11 @@ struct EditProfileView: View {
                         }
                         .padding(.vertical, 4)
                     }
-                    NavigationLink("Choose genres") {
+                    NavigationLink("Elegir géneros") {
                         GenrePickerView(selection: $genres)
                     }
                 } header: {
-                    Text("Favorite genres")
+                    Text("Géneros favoritos")
                 }
 
                 Section {
@@ -73,9 +73,9 @@ struct EditProfileView: View {
                         bookSlotRow(index)
                     }
                 } header: {
-                    Text("Top 4 books")
+                    Text("Mis 4 libros favoritos")
                 } footer: {
-                    Text("Tap a slot to search Google Books.")
+                    Text("Toca un espacio para buscar en Google Books.")
                 }
 
                 if let errorMessage {
@@ -86,22 +86,22 @@ struct EditProfileView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationTitle("Edit profile")
+            .navigationTitle("Editar perfil")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button("Save", action: save)
+                        Button("Guardar", action: save)
                     }
                 }
             }
             .sheet(item: $bookSlotToFill) { slot in
-                BookSearchView(title: "Favorite #\(slot.id + 1)") { book in
+                BookSearchView(title: "Favorito #\(slot.id + 1)") { book in
                     topBooks[slot.id] = book
                 }
             }
@@ -123,7 +123,7 @@ struct EditProfileView: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Remove \(book.title)")
+                .accessibilityLabel("Quitar \(book.title)")
             }
             .contentShape(Rectangle())
             .onTapGesture { bookSlotToFill = BookSlot(id: index) }
@@ -131,7 +131,7 @@ struct EditProfileView: View {
             Button {
                 bookSlotToFill = BookSlot(id: index)
             } label: {
-                Label("Add favorite #\(index + 1)", systemImage: "plus")
+                Label("Agregar favorito #\(index + 1)", systemImage: "plus")
             }
         }
     }
@@ -147,7 +147,7 @@ struct EditProfileView: View {
             guard let data = try await item.loadTransferable(type: Data.self),
                   let image = UIImage(data: data)
             else {
-                errorMessage = "Could not read that photo."
+                errorMessage = "No se pudo leer esa foto."
                 return
             }
             try await store.uploadAvatar(image)
@@ -177,7 +177,8 @@ private struct GenrePickerView: View {
 
     private var filtered: [String] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        return q.isEmpty ? Genres.all : Genres.all.filter { $0.localizedCaseInsensitiveContains(q) }
+        let sorted = Genres.all.sorted { Genres.label($0).localizedCompare(Genres.label($1)) == .orderedAscending }
+        return q.isEmpty ? sorted : sorted.filter { Genres.label($0).localizedCaseInsensitiveContains(q) }
     }
 
     var body: some View {
@@ -190,7 +191,7 @@ private struct GenrePickerView: View {
                 }
             } label: {
                 HStack {
-                    Text(genre).foregroundStyle(Theme.ink)
+                    Text(Genres.label(genre)).foregroundStyle(Theme.ink)
                     Spacer()
                     if selection.contains(genre) {
                         Image(systemName: "checkmark").foregroundStyle(Theme.midnight)
@@ -198,8 +199,8 @@ private struct GenrePickerView: View {
                 }
             }
         }
-        .searchable(text: $query, prompt: "Search genres")
-        .navigationTitle("Genres")
+        .searchable(text: $query, prompt: "Buscar géneros")
+        .navigationTitle("Géneros")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

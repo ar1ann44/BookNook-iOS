@@ -10,6 +10,10 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>BookNook connects to your BookNook server on the local network.</string>
+	<string>BookNook se conecta a tu servidor de BookNook en la red local.</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>es</string>
+	</array>
 </dict>
 </plist>

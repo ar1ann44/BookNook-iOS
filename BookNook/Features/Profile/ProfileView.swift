@@ -15,20 +15,20 @@ struct ProfileView: View {
                     ProgressView().padding(.top, 80)
                 } else if let error = store.errorMessage {
                     ContentUnavailableView {
-                        Label("Could not load your profile", systemImage: "wifi.exclamationmark")
+                        Label("No se pudo cargar tu perfil", systemImage: "wifi.exclamationmark")
                     } description: {
                         Text(error)
                     } actions: {
-                        Button("Try again") { Task { await store.load() } }
+                        Button("Reintentar") { Task { await store.load() } }
                     }
                 }
             }
             .background(Theme.background.ignoresSafeArea())
-            .navigationTitle("Profile")
+            .navigationTitle("Perfil")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
-                        Button("Log out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                        Button("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                             session.signOut()
                         }
                     } label: {
@@ -36,7 +36,7 @@ struct ProfileView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Edit") { isEditing = true }
+                    Button("Editar") { isEditing = true }
                         .disabled(store.profile == nil)
                 }
             }
@@ -62,7 +62,7 @@ private struct ProfileContent: View {
                     .font(Theme.heading(28))
                     .foregroundStyle(Theme.ink)
                 if profile.bio.isEmpty {
-                    Text("No bio yet. Tap Edit to tell other readers about you.")
+                    Text("Aún no tienes biografía. Toca Editar para contarle a otros lectores sobre ti.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -75,9 +75,9 @@ private struct ProfileContent: View {
             }
             .frame(maxWidth: .infinity)
 
-            SectionCard(title: "Favorite genres") {
+            SectionCard(title: "Géneros favoritos") {
                 if profile.genres.isEmpty {
-                    Text("No genres picked yet.")
+                    Text("Aún no eliges géneros.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
@@ -87,7 +87,7 @@ private struct ProfileContent: View {
                 }
             }
 
-            SectionCard(title: "Top 4 books") {
+            SectionCard(title: "Mis 4 libros favoritos") {
                 FavoriteBooksGrid(books: profile.topBooks)
             }
         }
@@ -103,7 +103,7 @@ struct FavoriteBooksGrid: View {
                 VStack(spacing: 6) {
                     if index < books.count {
                         let book = books[index]
-                        BookCoverView(urlString: book.coverUrl, width: 72)
+                        BookCoverView(urlString: book.coverUrl, title: book.title, author: book.author, width: 72)
                         Text(book.title)
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(Theme.ink)

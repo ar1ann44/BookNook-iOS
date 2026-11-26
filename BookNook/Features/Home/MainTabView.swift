@@ -4,13 +4,13 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             FeedView()
-                .tabItem { Label("Feed", systemImage: "house") }
+                .tabItem { Label("Inicio", systemImage: "house") }
 
             ClubsView()
-                .tabItem { Label("Clubs", systemImage: "person.3") }
+                .tabItem { Label("Clubes", systemImage: "person.3") }
 
             ProfileView()
-                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+                .tabItem { Label("Perfil", systemImage: "person.crop.circle") }
         }
     }
 }

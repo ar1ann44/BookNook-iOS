@@ -15,7 +15,7 @@ struct PollView: View {
             if let poll {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Label("Next book poll", systemImage: "chart.bar.fill")
+                        Label("Encuesta del próximo libro", systemImage: "chart.bar.fill")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Theme.moss)
                         Text(poll.question)
@@ -45,24 +45,24 @@ struct PollView: View {
                 }
                 .padding(20)
             } else if let errorMessage {
-                ContentUnavailableView("Could not load the poll", systemImage: "exclamationmark.triangle", description: Text(errorMessage))
+                ContentUnavailableView("No se pudo cargar la encuesta", systemImage: "exclamationmark.triangle", description: Text(errorMessage))
                     .padding(.top, 60)
             } else {
                 ProgressView().padding(.top, 80)
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("Poll")
+        .navigationTitle("Encuesta")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
         .task { await keepUpdated() }
     }
 
     private func summary(for poll: Poll) -> String {
-        let votes = "\(poll.totalVotes) \(poll.totalVotes == 1 ? "vote" : "votes")"
+        let votes = "\(poll.totalVotes) \(poll.totalVotes == 1 ? "voto" : "votos")"
         return poll.myVoteOptionId == nil
-            ? "\(votes) · Tap a book to vote"
-            : "\(votes) · Tap another book to change your vote"
+            ? "\(votes) · Toca un libro para votar"
+            : "\(votes) · Toca otro libro para cambiar tu voto"
     }
 
     private func isLeading(_ option: PollOption, in poll: Poll) -> Bool {
@@ -119,7 +119,7 @@ private struct PollOptionCard: View {
     var body: some View {
         Button(action: onVote) {
             HStack(spacing: 14) {
-                BookCoverView(urlString: option.coverUrl, width: 56)
+                BookCoverView(urlString: option.coverUrl, title: option.title, author: option.author, width: 56)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(option.title)
@@ -140,7 +140,7 @@ private struct PollOptionCard: View {
                         .foregroundStyle(.secondary)
                     ProgressView(value: share)
                         .tint(isLeading ? Theme.rosy : Theme.moss)
-                    Text("\(option.votes) \(option.votes == 1 ? "vote" : "votes") · \(Int((share * 100).rounded()))%")
+                    Text("\(option.votes) \(option.votes == 1 ? "voto" : "votos") · \(Int((share * 100).rounded()))%")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -154,6 +154,6 @@ private struct PollOptionCard: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(option.title) by \(option.author), \(option.votes) votes\(isMyVote ? ", your vote" : "")")
+        .accessibilityLabel("\(option.title) de \(option.author), \(option.votes) votos\(isMyVote ? ", tu voto" : "")")
     }
 }

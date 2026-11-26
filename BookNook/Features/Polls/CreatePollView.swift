@@ -5,7 +5,7 @@ struct CreatePollView: View {
     let onCreated: (CreatePollResponse) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var question = "What should we read next?"
+    @State private var question = "¿Qué leemos después?"
     @State private var books: [Book] = []
     @State private var showingSearch = false
     @State private var isSaving = false
@@ -23,8 +23,8 @@ struct CreatePollView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Question") {
-                    TextField("What should we read next?", text: $question, axis: .vertical)
+                Section("Pregunta") {
+                    TextField("¿Qué leemos después?", text: $question, axis: .vertical)
                         .lineLimit(1...3)
                 }
 
@@ -35,12 +35,12 @@ struct CreatePollView: View {
                     .onDelete { books.remove(atOffsets: $0) }
 
                     if books.count < Self.maxOptions {
-                        Button("Add a book", systemImage: "plus") { showingSearch = true }
+                        Button("Agregar un libro", systemImage: "plus") { showingSearch = true }
                     }
                 } header: {
-                    Text("Books (\(books.count)/\(Self.maxOptions))")
+                    Text("Libros (\(books.count)/\(Self.maxOptions))")
                 } footer: {
-                    Text("Pick between \(Self.minOptions) and \(Self.maxOptions) books. Swipe left on a book to remove it.")
+                    Text("Elige entre \(Self.minOptions) y \(Self.maxOptions) libros. Desliza un libro a la izquierda para quitarlo.")
                 }
 
                 if let errorMessage {
@@ -51,22 +51,22 @@ struct CreatePollView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationTitle("New poll")
+            .navigationTitle("Nueva encuesta")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button("Create", action: create).disabled(!canCreate)
+                        Button("Crear", action: create).disabled(!canCreate)
                     }
                 }
             }
             .sheet(isPresented: $showingSearch) {
-                BookSearchView(title: "Add a book") { book in
+                BookSearchView(title: "Agregar un libro") { book in
                     guard !books.contains(where: { $0.stableID == book.stableID }) else { return }
                     books.append(book)
                 }

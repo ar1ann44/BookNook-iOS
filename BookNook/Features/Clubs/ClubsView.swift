@@ -2,8 +2,8 @@ import SwiftUI
 
 struct ClubsView: View {
     private enum Tab: String, CaseIterable, Identifiable {
-        case mine = "My clubs"
-        case discover = "Discover"
+        case mine = "Mis clubes"
+        case discover = "Descubrir"
         var id: String { rawValue }
     }
 
@@ -20,7 +20,7 @@ struct ClubsView: View {
     var body: some View {
         NavigationStack(path: $path) {
             List {
-                Picker("Section", selection: $tab) {
+                Picker("Sección", selection: $tab) {
                     ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
@@ -47,19 +47,19 @@ struct ClubsView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background.ignoresSafeArea())
             .overlay { emptyState }
-            .navigationTitle("Clubs")
+            .navigationTitle("Clubes")
             .navigationDestination(for: Int.self) { clubId in
                 ClubDetailView(clubId: clubId, onChange: { Task { await load() } })
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button("Create a club", systemImage: "plus") { showingCreate = true }
-                        Button("Join with a code", systemImage: "key") { showingJoinByCode = true }
+                        Button("Crear un club", systemImage: "plus") { showingCreate = true }
+                        Button("Unirme con código", systemImage: "key") { showingJoinByCode = true }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                     }
-                    .accessibilityLabel("Add club")
+                    .accessibilityLabel("Agregar club")
                 }
             }
             .refreshable { await load() }
@@ -92,14 +92,14 @@ struct ClubsView: View {
         } else if !isLoading && errorMessage == nil {
             if tab == .mine && myClubs.isEmpty {
                 ContentUnavailableView {
-                    Label("No clubs yet", systemImage: "person.3")
+                    Label("Aún no tienes clubes", systemImage: "person.3")
                 } description: {
-                    Text("Create a club or discover one to join.")
+                    Text("Crea un club o descubre uno para unirte.")
                 } actions: {
-                    Button("Discover clubs") { tab = .discover }
+                    Button("Descubrir clubes") { tab = .discover }
                 }
             } else if tab == .discover && publicClubs.isEmpty {
-                ContentUnavailableView("No public clubs yet", systemImage: "globe")
+                ContentUnavailableView("Aún no hay clubes públicos", systemImage: "globe")
             }
         }
     }
@@ -108,7 +108,7 @@ struct ClubsView: View {
     private func discoverRow(_ club: Club) -> some View {
         if club.isMember == true {
             NavigationLink(value: club.id) {
-                ClubRow(club: club, trailingText: "Joined")
+                ClubRow(club: club, trailingText: "Miembro")
             }
         } else {
             HStack {
@@ -119,7 +119,7 @@ struct ClubsView: View {
                     if joiningClubId == club.id {
                         ProgressView()
                     } else {
-                        Text("Join").fontWeight(.semibold)
+                        Text("Unirme").fontWeight(.semibold)
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -163,7 +163,7 @@ struct ClubRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            BookCoverView(urlString: club.currentBook?.coverUrl, width: 44)
+            BookCoverView(urlString: club.currentBook?.coverUrl, title: club.currentBook?.title, author: club.currentBook?.author, width: 44)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(club.name)
@@ -175,7 +175,7 @@ struct ClubRow: View {
                         .foregroundStyle(Theme.moss)
                 }
                 if let book = club.currentBook {
-                    Text("Reading \(book.title)")
+                    Text("Leyendo \(book.title)")
                         .font(.subheadline)
                         .foregroundStyle(Theme.midnight)
                         .lineLimit(1)
@@ -187,7 +187,7 @@ struct ClubRow: View {
                 }
                 HStack(spacing: 8) {
                     if let count = club.memberCount {
-                        Label("\(count) \(count == 1 ? "member" : "members")", systemImage: "person.2")
+                        Label("\(count) \(count == 1 ? "miembro" : "miembros")", systemImage: "person.2")
                     }
                     if club.isAdmin {
                         Label("Admin", systemImage: "star.fill")

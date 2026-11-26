@@ -54,14 +54,14 @@ struct GenreChip: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(title)
+            Text(Genres.label(title))
             if let onRemove {
                 Button(action: onRemove) {
                     Image(systemName: "xmark")
                         .font(.caption2.bold())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Remove \(title)")
+                .accessibilityLabel("Quitar \(Genres.label(title))")
             }
         }
         .font(.footnote.weight(.medium))

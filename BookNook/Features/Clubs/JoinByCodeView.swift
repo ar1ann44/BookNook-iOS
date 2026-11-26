@@ -15,10 +15,10 @@ struct JoinByCodeView: View {
                 Image(systemName: "key.fill")
                     .font(.system(size: 40))
                     .foregroundStyle(Theme.moss)
-                Text("Join a private club")
+                Text("Únete a un club privado")
                     .font(Theme.heading(24))
                     .foregroundStyle(Theme.ink)
-                Text("Enter the 6-character invite code a club admin shared with you.")
+                Text("Escribe el código de 6 caracteres que te compartió el administrador del club.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -37,7 +37,7 @@ struct JoinByCodeView: View {
                 ErrorText(message: errorMessage)
 
                 Button(action: join) {
-                    if isJoining { ProgressView().tint(.white) } else { Text("Join club") }
+                    if isJoining { ProgressView().tint(.white) } else { Text("Unirme al club") }
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(code.count < 6 || isJoining)
@@ -48,7 +48,7 @@ struct JoinByCodeView: View {
             .background(Theme.background.ignoresSafeArea())
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
             }
             .onAppear { focused = true }

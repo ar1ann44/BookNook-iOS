@@ -5,7 +5,7 @@ enum ClubPrivacy: String, Codable, CaseIterable, Identifiable {
     case `private`
 
     var id: String { rawValue }
-    var label: String { self == .public ? "Public" : "Private" }
+    var label: String { self == .public ? "Público" : "Privado" }
     var systemImage: String { self == .public ? "globe" : "lock.fill" }
 }
 

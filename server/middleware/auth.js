@@ -5,7 +5,7 @@ function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid authorization header.' })
+    return res.status(401).json({ error: 'Necesitas iniciar sesión.' })
   }
 
   const token = authHeader.slice('Bearer '.length)
@@ -15,7 +15,7 @@ function requireAuth(req, res, next) {
     req.userId = payload.id
     next()
   } catch (err) {
-    res.status(401).json({ error: 'Invalid or expired token.' })
+    res.status(401).json({ error: 'Tu sesión expiró. Vuelve a iniciar sesión.' })
   }
 }
 

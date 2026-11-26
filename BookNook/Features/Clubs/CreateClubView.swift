@@ -20,27 +20,27 @@ struct CreateClubView: View {
         NavigationStack {
             Form {
                 Section("Club") {
-                    TextField("Name", text: $name)
-                    TextField("What is this club about?", text: $description, axis: .vertical)
+                    TextField("Nombre", text: $name)
+                    TextField("¿De qué trata este club?", text: $description, axis: .vertical)
                         .lineLimit(2...5)
                 }
 
                 Section {
-                    Picker("Privacy", selection: $privacy) {
+                    Picker("Privacidad", selection: $privacy) {
                         ForEach(ClubPrivacy.allCases) { option in
                             Label(option.label, systemImage: option.systemImage).tag(option)
                         }
                     }
                     .pickerStyle(.segmented)
                 } header: {
-                    Text("Who can join")
+                    Text("Quién puede unirse")
                 } footer: {
                     Text(privacy == .public
-                         ? "Anyone can find this club and join with one tap."
-                         : "Only people with the invite code can join. You'll get the code after creating the club.")
+                         ? "Cualquiera puede encontrar este club y unirse con un toque."
+                         : "Solo pueden unirse personas con el código de invitación. Recibirás el código al crear el club.")
                 }
 
-                Section("Current book") {
+                Section("Libro actual") {
                     if let currentBook {
                         HStack {
                             BookRow(book: currentBook)
@@ -50,10 +50,10 @@ struct CreateClubView: View {
                                 Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Remove current book")
+                            .accessibilityLabel("Quitar libro actual")
                         }
                     } else {
-                        Button("Choose a book", systemImage: "magnifyingglass") {
+                        Button("Elegir un libro", systemImage: "magnifyingglass") {
                             showingBookSearch = true
                         }
                     }
@@ -67,22 +67,22 @@ struct CreateClubView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationTitle("New club")
+            .navigationTitle("Nuevo club")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button("Create", action: create).disabled(!canCreate)
+                        Button("Crear", action: create).disabled(!canCreate)
                     }
                 }
             }
             .sheet(isPresented: $showingBookSearch) {
-                BookSearchView(title: "Current book") { currentBook = $0 }
+                BookSearchView(title: "Libro actual") { currentBook = $0 }
             }
         }
     }

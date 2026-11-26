@@ -15,7 +15,7 @@ struct AuthFlowView: View {
                         Text("BookNook")
                             .font(Theme.heading(40))
                             .foregroundStyle(Theme.ink)
-                        Text("Read together, one chapter at a time.")
+                        Text("Leamos juntos, un capítulo a la vez.")
                             .font(Theme.body)
                             .foregroundStyle(Theme.midnight)
                     }
@@ -37,7 +37,7 @@ struct AuthFlowView: View {
                     } label: {
                         Image(systemName: "server.rack")
                     }
-                    .accessibilityLabel("Server settings")
+                    .accessibilityLabel("Configuración del servidor")
                 }
             }
             .sheet(isPresented: $showingServerSettings) {
@@ -58,31 +58,31 @@ private struct LoginForm: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("Log in")
+            Text("Iniciar sesión")
                 .font(Theme.heading(26))
                 .foregroundStyle(Theme.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            TextField("Email", text: $email)
+            TextField("Correo electrónico", text: $email)
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .fieldStyle()
 
-            SecureField("Password", text: $password)
+            SecureField("Contraseña", text: $password)
                 .textContentType(.password)
                 .fieldStyle()
 
             ErrorText(message: errorMessage)
 
             Button(action: submit) {
-                if isLoading { ProgressView().tint(.white) } else { Text("Log in") }
+                if isLoading { ProgressView().tint(.white) } else { Text("Entrar") }
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(isLoading || email.isEmpty || password.isEmpty)
 
-            Button("Don't have an account? Sign up", action: onSwitch)
+            Button("¿No tienes cuenta? Regístrate", action: onSwitch)
                 .font(.subheadline)
                 .padding(.top, 4)
         }
@@ -119,41 +119,41 @@ private struct SignUpForm: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("Create your account")
+            Text("Crea tu cuenta")
                 .font(Theme.heading(26))
                 .foregroundStyle(Theme.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            TextField("Username", text: $username)
+            TextField("Nombre de usuario", text: $username)
                 .textContentType(.username)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .fieldStyle()
 
-            TextField("Email", text: $email)
+            TextField("Correo electrónico", text: $email)
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .fieldStyle()
 
-            SecureField("Password", text: $password)
+            SecureField("Contraseña", text: $password)
                 .textContentType(.newPassword)
                 .fieldStyle()
 
-            SecureField("Confirm password", text: $confirmPassword)
+            SecureField("Confirmar contraseña", text: $confirmPassword)
                 .textContentType(.newPassword)
                 .fieldStyle()
 
             ErrorText(message: errorMessage)
 
             Button(action: submit) {
-                if isLoading { ProgressView().tint(.white) } else { Text("Sign up") }
+                if isLoading { ProgressView().tint(.white) } else { Text("Crear cuenta") }
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(!canSubmit)
 
-            Button("Already have an account? Log in", action: onSwitch)
+            Button("¿Ya tienes cuenta? Inicia sesión", action: onSwitch)
                 .font(.subheadline)
                 .padding(.top, 4)
         }
@@ -162,11 +162,11 @@ private struct SignUpForm: View {
     private func submit() {
         errorMessage = nil
         guard password == confirmPassword else {
-            errorMessage = "Passwords do not match."
+            errorMessage = "Las contraseñas no coinciden."
             return
         }
         guard password.count >= 6 else {
-            errorMessage = "Use at least 6 characters for your password."
+            errorMessage = "Usa al menos 6 caracteres en tu contraseña."
             return
         }
         isLoading = true

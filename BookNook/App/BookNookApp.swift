@@ -5,6 +5,10 @@ struct BookNookApp: App {
     @State private var session = SessionStore()
     @State private var toasts = ToastCenter()
 
+    init() {
+        Theme.applyNavigationBarStyle()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

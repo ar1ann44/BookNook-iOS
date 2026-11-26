@@ -38,12 +38,12 @@ struct FeedView: View {
                     discoverSection
                     recommendationsSection
                 }
-                .padding(.vertical, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 20)
             }
             .background(Theme.background.ignoresSafeArea())
             .overlay { if !hasLoaded { ProgressView() } }
             .navigationTitle("Inicio")
-            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: FeedRoute.self) { route in
                 switch route {
                 case .club(let clubId):
@@ -64,15 +64,11 @@ struct FeedView: View {
     // MARK: Sections
 
     private var greeting: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Hola, \(session.user?.username ?? "lector")")
-                .font(Theme.heading(30))
-                .foregroundStyle(Theme.ink)
-            Text("Esto es lo que pasa en tus clubes de lectura.")
-                .font(Theme.body)
-                .foregroundStyle(Theme.midnight)
-        }
-        .padding(.horizontal, 20)
+        (Text("Hola, \(session.user?.username ?? "lector"). ").fontWeight(.semibold)
+            + Text("Esto es lo que pasa en tus clubes de lectura."))
+            .font(Theme.body)
+            .foregroundStyle(Theme.midnight)
+            .padding(.horizontal, 20)
     }
 
     @ViewBuilder

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum Theme {
     static let ink = Color(hex: 0x0A3323)
@@ -24,6 +25,29 @@ enum Theme {
     }
 
     static let body = Font.system(.body, design: .serif)
+
+    /// Every navigation title (large and inline) uses the same serif as the
+    /// rest of the app's headings, so Inicio, Clubes and Perfil match.
+    static func applyNavigationBarStyle() {
+        let ink = UIColor(red: 0x0A / 255, green: 0x33 / 255, blue: 0x23 / 255, alpha: 1)
+
+        func serif(_ style: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
+            let base = UIFont.preferredFont(forTextStyle: style)
+            let font = UIFont.systemFont(ofSize: base.pointSize, weight: weight)
+            guard let descriptor = font.fontDescriptor.withDesign(.serif) else { return font }
+            return UIFontMetrics(forTextStyle: style).scaledFont(for: UIFont(descriptor: descriptor, size: 0))
+        }
+
+        let navigationBar = UINavigationBar.appearance()
+        navigationBar.largeTitleTextAttributes = [
+            .font: serif(.largeTitle, weight: .bold),
+            .foregroundColor: ink,
+        ]
+        navigationBar.titleTextAttributes = [
+            .font: serif(.headline, weight: .semibold),
+            .foregroundColor: ink,
+        ]
+    }
 }
 
 extension Color {

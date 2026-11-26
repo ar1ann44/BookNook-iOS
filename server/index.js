@@ -546,6 +546,88 @@ function readPoll(poll, userId) {
   }
 }
 
+// Messages from other people in a channel that the user has not read yet.
+function countUnread(userId, channelId) {
+  return db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM club_messages
+       WHERE channel_id = ?
+         AND user_id != ?
+         AND id > COALESCE(
+           (SELECT last_read_message_id FROM channel_reads WHERE user_id = ? AND channel_id = ?),
+           0
+         )`,
+    )
+    .get(channelId, userId, userId, channelId).count
+}
+
+function markRead(userId, channelId, messageId) {
+  db.prepare(
+    `INSERT INTO channel_reads (user_id, channel_id, last_read_message_id) VALUES (?, ?, ?)
+     ON CONFLICT (user_id, channel_id)
+     DO UPDATE SET last_read_message_id = MAX(last_read_message_id, excluded.last_read_message_id)`,
+  ).run(userId, channelId, messageId)
+}
+
+// One entry per club the user belongs to: its latest chat message and how many
+// messages they haven't read yet. Clubs with no messages are left out.
+app.get('/me/club-activity', requireAuth, (req, res) => {
+  const clubs = db
+    .prepare(
+      `SELECT clubs.id, clubs.name
+       FROM clubs
+       JOIN club_members ON club_members.club_id = clubs.id
+       WHERE club_members.user_id = ?`,
+    )
+    .all(req.userId)
+
+  const latestMessage = db.prepare(
+    `SELECT club_messages.id, club_messages.content, club_messages.created_at,
+            club_channels.id AS channel_id, club_channels.name AS channel_name,
+            users.username, users.avatar_url
+     FROM club_messages
+     JOIN club_channels ON club_channels.id = club_messages.channel_id
+     JOIN users ON users.id = club_messages.user_id
+     WHERE club_channels.club_id = ? AND club_channels.type = 'general'
+     ORDER BY club_messages.created_at DESC, club_messages.id DESC
+     LIMIT 1`,
+  )
+
+  const generalChannels = db.prepare(
+    "SELECT id FROM club_channels WHERE club_id = ? AND type = 'general'",
+  )
+
+  const activity = clubs
+    .map((club) => {
+      const latest = latestMessage.get(club.id)
+      if (!latest) return null
+
+      const unreadCount = generalChannels
+        .all(club.id)
+        .reduce((total, channel) => total + countUnread(req.userId, channel.id), 0)
+
+      return {
+        clubId: club.id,
+        clubName: club.name,
+        unreadCount,
+        latestMessage: {
+          id: latest.id,
+          content: latest.content,
+          createdAt: latest.created_at,
+          username: latest.username,
+          avatarUrl: toPublicPath(latest.avatar_url),
+          channelId: latest.channel_id,
+          channelName: latest.channel_name,
+        },
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.latestMessage.id - a.latestMessage.id)
+
+  res.json(activity)
+})
+
 // Latest chatter across every club the user belongs to, newest first.
 app.get('/me/activity', requireAuth, (req, res) => {
   const rows = db
@@ -592,7 +674,9 @@ app.get('/clubs/:id/channels', requireAuth, (req, res) => {
   // Poll channels carry their poll id so the frontend can load it directly.
   res.json(
     rows.map((row) => {
-      if (row.type !== 'poll') return toChannelResponse(row)
+      if (row.type !== 'poll') {
+        return toChannelResponse(row, { unreadCount: countUnread(req.userId, row.id) })
+      }
 
       const poll = db.prepare('SELECT id FROM club_polls WHERE channel_id = ?').get(row.id)
       return toChannelResponse(row, { pollId: poll ? poll.id : null })
@@ -717,6 +801,8 @@ app.post('/clubs/:id/channels/:channelId/messages', requireAuth, (req, res) => {
   const result = db
     .prepare('INSERT INTO club_messages (channel_id, user_id, content) VALUES (?, ?, ?)')
     .run(channel.id, req.userId, content.trim())
+
+  markRead(req.userId, channel.id, result.lastInsertRowid)
 
   const row = db
     .prepare(
@@ -851,6 +937,84 @@ app.post('/clubs/:id/polls/:pollId/vote', requireAuth, (req, res) => {
   ).run(poll.id, option.id, req.userId)
 
   res.json(readPoll(poll, req.userId))
+})
+
+app.post('/clubs/:id/channels/:channelId/read', requireAuth, (req, res) => {
+  const access = requireMembership(req, res)
+  if (!access) return
+
+  const channel = getChannelForClub(access.club.id, req.params.channelId)
+
+  if (!channel) {
+    return res.status(404).json({ error: 'No se encontró el canal.' })
+  }
+
+  const messageId = Number(req.body.messageId)
+
+  if (!Number.isInteger(messageId) || messageId < 0) {
+    return res.status(400).json({ error: 'Falta el mensaje leído.' })
+  }
+
+  markRead(req.userId, channel.id, messageId)
+  res.json({ unreadCount: countUnread(req.userId, channel.id) })
+})
+
+// Admins can change the club's name, description and current book. Only the
+// fields sent are updated, so the app can change just the current book.
+app.put('/clubs/:id', requireAuth, (req, res) => {
+  const access = requireMembership(req, res)
+  if (!access) return
+
+  if (access.membership.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo los administradores pueden editar el club.' })
+  }
+
+  const { name, description, currentBook } = req.body
+  const club = access.club
+
+  if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
+    return res.status(400).json({ error: 'El nombre del club es obligatorio.' })
+  }
+
+  if (currentBook && (!currentBook.title || !currentBook.author)) {
+    return res.status(400).json({ error: 'El libro actual necesita título y autor.' })
+  }
+
+  db.prepare('UPDATE clubs SET name = ?, description = ?, current_book = ? WHERE id = ?').run(
+    name !== undefined ? name.trim() : club.name,
+    description !== undefined ? (description || '').trim() || null : club.description,
+    currentBook !== undefined ? (currentBook ? JSON.stringify(currentBook) : null) : club.current_book,
+    club.id,
+  )
+
+  const row = db.prepare('SELECT * FROM clubs WHERE id = ?').get(club.id)
+  res.json(toClubResponse(row, { role: access.membership.role }))
+})
+
+app.post('/clubs/:id/leave', requireAuth, (req, res) => {
+  const access = requireMembership(req, res)
+  if (!access) return
+
+  if (access.membership.role === 'admin') {
+    const otherAdmins = db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM club_members WHERE club_id = ? AND role = 'admin' AND user_id != ?",
+      )
+      .get(access.club.id, req.userId).count
+
+    if (otherAdmins === 0) {
+      return res
+        .status(400)
+        .json({ error: 'Eres el único administrador de este club, así que no puedes salir.' })
+    }
+  }
+
+  db.prepare('DELETE FROM club_members WHERE club_id = ? AND user_id = ?').run(
+    access.club.id,
+    req.userId,
+  )
+
+  res.json({ left: true })
 })
 
 app.listen(PORT, () => {

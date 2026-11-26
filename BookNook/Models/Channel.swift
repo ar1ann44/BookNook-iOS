@@ -12,6 +12,7 @@ struct Channel: Codable, Identifiable, Hashable {
     var type: ChannelType
     var createdAt: String?
     var pollId: Int?
+    var unreadCount: Int?
 }
 
 struct ChatMessage: Codable, Identifiable, Hashable {

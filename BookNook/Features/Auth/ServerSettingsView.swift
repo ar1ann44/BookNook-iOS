@@ -10,14 +10,14 @@ struct ServerSettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("http://192.168.1.10:4000", text: $address)
+                    TextField("http://Mi-Mac.local:4000", text: $address)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 } header: {
                     Text("Dirección del servidor")
                 } footer: {
-                    Text("En el simulador usa http://localhost:4000. En tu iPhone usa la IP local de tu Mac (Ajustes del Sistema › Wi‑Fi › Detalles) y mantén ambos en la misma red Wi‑Fi.")
+                    Text("En el simulador usa http://localhost:4000. En tu iPhone usa el nombre de tu Mac terminado en .local, por ejemplo http://Mi-Mac.local:4000: sigue funcionando aunque cambie la IP. Lo encuentras en Ajustes del Sistema › General › Compartir › Nombre del host local. El iPhone y la Mac deben estar en la misma red Wi‑Fi.")
                 }
 
                 Section {

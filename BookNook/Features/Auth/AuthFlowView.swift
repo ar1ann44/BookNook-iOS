@@ -26,20 +26,20 @@ struct AuthFlowView: View {
                     } else {
                         LoginForm(onSwitch: { withAnimation { showingSignUp = true } })
                     }
-                }
-                .padding(24)
-            }
-            .background(Theme.background.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+
                     Button {
                         showingServerSettings = true
                     } label: {
-                        Image(systemName: "server.rack")
+                        Label("Configurar servidor", systemImage: "gearshape")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.ink.opacity(0.55))
                     }
-                    .accessibilityLabel("Configuración del servidor")
+                    .padding(.top, 12)
                 }
+                .padding(24)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Theme.background.ignoresSafeArea())
             .sheet(isPresented: $showingServerSettings) {
                 ServerSettingsView()
             }
@@ -55,6 +55,9 @@ private struct LoginForm: View {
     @State private var password = ""
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @FocusState private var focus: Field?
+
+    private enum Field { case email, password }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -68,11 +71,15 @@ private struct LoginForm: View {
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .submitLabel(.next)
+                .focused($focus, equals: .email)
+                .onSubmit { focus = .password }
                 .fieldStyle()
 
-            SecureField("Contraseña", text: $password)
-                .textContentType(.password)
-                .fieldStyle()
+            PasswordField(title: "Contraseña", text: $password, contentType: .password)
+                .submitLabel(.go)
+                .focused($focus, equals: .password)
+                .onSubmit { if canSubmit { submit() } }
 
             ErrorText(message: errorMessage)
 
@@ -80,7 +87,7 @@ private struct LoginForm: View {
                 if isLoading { ProgressView().tint(.white) } else { Text("Entrar") }
             }
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(isLoading || email.isEmpty || password.isEmpty)
+            .disabled(!canSubmit)
 
             Button("¿No tienes cuenta? Regístrate", action: onSwitch)
                 .font(.subheadline)
@@ -88,8 +95,13 @@ private struct LoginForm: View {
         }
     }
 
+    private var canSubmit: Bool {
+        !isLoading && !email.isEmpty && !password.isEmpty
+    }
+
     private func submit() {
         errorMessage = nil
+        focus = nil
         isLoading = true
         Task {
             defer { isLoading = false }
@@ -112,6 +124,9 @@ private struct SignUpForm: View {
     @State private var confirmPassword = ""
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @FocusState private var focus: Field?
+
+    private enum Field { case username, email, password, confirm }
 
     private var canSubmit: Bool {
         !username.isEmpty && !email.isEmpty && !password.isEmpty && !isLoading
@@ -128,6 +143,9 @@ private struct SignUpForm: View {
                 .textContentType(.username)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .submitLabel(.next)
+                .focused($focus, equals: .username)
+                .onSubmit { focus = .email }
                 .fieldStyle()
 
             TextField("Correo electrónico", text: $email)
@@ -135,15 +153,27 @@ private struct SignUpForm: View {
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .submitLabel(.next)
+                .focused($focus, equals: .email)
+                .onSubmit { focus = .password }
                 .fieldStyle()
 
-            SecureField("Contraseña", text: $password)
-                .textContentType(.newPassword)
-                .fieldStyle()
+            PasswordField(title: "Contraseña (mínimo 6 caracteres)", text: $password, contentType: .newPassword)
+                .submitLabel(.next)
+                .focused($focus, equals: .password)
+                .onSubmit { focus = .confirm }
 
-            SecureField("Confirmar contraseña", text: $confirmPassword)
-                .textContentType(.newPassword)
-                .fieldStyle()
+            PasswordField(title: "Confirmar contraseña", text: $confirmPassword, contentType: .newPassword)
+                .submitLabel(.go)
+                .focused($focus, equals: .confirm)
+                .onSubmit { if canSubmit { submit() } }
+
+            if !confirmPassword.isEmpty && confirmPassword != password {
+                Text("Las contraseñas no coinciden.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.rosy)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             ErrorText(message: errorMessage)
 
@@ -195,5 +225,40 @@ struct ErrorText: View {
                 .foregroundStyle(.red)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+/// Secure field with a button to show or hide what was typed.
+struct PasswordField: View {
+    let title: String
+    @Binding var text: String
+    var contentType: UITextContentType = .password
+
+    @State private var isRevealed = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Group {
+                if isRevealed {
+                    TextField(title, text: $text)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } else {
+                    SecureField(title, text: $text)
+                }
+            }
+            .textContentType(contentType)
+
+            Button {
+                isRevealed.toggle()
+            } label: {
+                Image(systemName: isRevealed ? "eye.slash" : "eye")
+                    .foregroundStyle(Theme.ink.opacity(0.5))
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isRevealed ? "Ocultar contraseña" : "Mostrar contraseña")
+        }
+        .fieldStyle()
     }
 }

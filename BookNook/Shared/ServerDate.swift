@@ -15,19 +15,31 @@ enum ServerDate {
         return parser.date(from: value)
     }
 
+    /// Time of day only; chat shows the date in day separators.
     static func shortLabel(_ value: String?) -> String {
         guard let date = parse(value) else { return "" }
-        if Calendar.current.isDateInToday(date) {
-            return date.formatted(date: .omitted, time: .shortened)
-        }
-        if Calendar.current.isDateInYesterday(date) {
-            return "Ayer " + date.formatted(date: .omitted, time: .shortened)
-        }
-        return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+        return date.formatted(date: .omitted, time: .shortened)
+    }
+
+    static func isSameDay(_ a: String?, _ b: String?) -> Bool {
+        guard let first = parse(a), let second = parse(b) else { return false }
+        return Calendar.current.isDate(first, inSameDayAs: second)
+    }
+
+    /// "Hoy", "Ayer" or a date such as "lunes, 24 de noviembre".
+    static func dayLabel(_ value: String?) -> String {
+        guard let date = parse(value) else { return "" }
+        if Calendar.current.isDateInToday(date) { return "Hoy" }
+        if Calendar.current.isDateInYesterday(date) { return "Ayer" }
+        let sameYear = Calendar.current.isDate(date, equalTo: .now, toGranularity: .year)
+        let style: Date.FormatStyle = sameYear
+            ? .dateTime.weekday(.wide).day().month(.wide)
+            : .dateTime.day().month(.wide).year()
+        return date.formatted(style.locale(Locale(identifier: "es")))
     }
 
     static func relative(_ value: String?) -> String {
         guard let date = parse(value) else { return "" }
-        return date.formatted(.relative(presentation: .named))
+        return date.formatted(.relative(presentation: .named).locale(Locale(identifier: "es")))
     }
 }

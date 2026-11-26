@@ -26,6 +26,17 @@ enum ChannelService {
         )
     }
 
+    @discardableResult
+    static func markRead(clubId: Int, channelId: Int, messageId: Int) async throws -> Int {
+        struct Body: Encodable { let messageId: Int }
+        struct Response: Decodable { let unreadCount: Int }
+        let response: Response = try await api.request(
+            .post, "clubs/\(clubId)/channels/\(channelId)/read",
+            body: Body(messageId: messageId)
+        )
+        return response.unreadCount
+    }
+
     static func poll(clubId: Int, pollId: Int) async throws -> Poll {
         try await api.request(.get, "clubs/\(clubId)/polls/\(pollId)")
     }

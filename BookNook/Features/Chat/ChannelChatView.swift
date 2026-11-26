@@ -10,6 +10,7 @@ struct ChannelChatView: View {
     @State private var isLoading = true
     @State private var isSending = false
     @State private var errorMessage: String?
+    @State private var lastMarkedRead = 0
     @FocusState private var inputFocused: Bool
 
     private static let refreshInterval: Duration = .seconds(3)
@@ -28,10 +29,15 @@ struct ChannelChatView: View {
                         .padding(.top, 60)
                     }
                     ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
+                        let previous = index > 0 ? messages[index - 1] : nil
+                        let startsNewDay = !ServerDate.isSameDay(previous?.createdAt, message.createdAt)
+                        if startsNewDay {
+                            DaySeparator(label: ServerDate.dayLabel(message.createdAt))
+                        }
                         MessageBubble(
                             message: message,
                             isMine: message.userId == session.user?.id,
-                            showsAuthor: index == 0 || messages[index - 1].userId != message.userId
+                            showsAuthor: startsNewDay || previous?.userId != message.userId
                         )
                     }
                     Color.clear.frame(height: 1).id(bottomID)
@@ -108,6 +114,7 @@ struct ChannelChatView: View {
             )
             append(newer)
             errorMessage = nil
+            await markReadIfNeeded()
         } catch is CancellationError {
         } catch {
             if messages.isEmpty { errorMessage = error.localizedDescription }
@@ -122,9 +129,18 @@ struct ChannelChatView: View {
         messages.sort { $0.id < $1.id }
     }
 
+    /// Tells the server the newest message here has been seen, so the club
+    /// stops showing it as unread on the Home screen.
+    private func markReadIfNeeded() async {
+        guard let newest = messages.last?.id, newest > lastMarkedRead else { return }
+        lastMarkedRead = newest
+        _ = try? await ChannelService.markRead(clubId: clubId, channelId: channel.id, messageId: newest)
+    }
+
     private func send() {
         let content = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !content.isEmpty else { return }
+        Haptics.tap()
         isSending = true
         draft = ""
         Task {
@@ -188,5 +204,22 @@ private struct MessageBubble: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 .textSelection(.enabled)
         }
+    }
+}
+
+private struct DaySeparator: View {
+    let label: String
+
+    var body: some View {
+        Text(label)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Theme.ink.opacity(0.6))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Theme.locked.opacity(0.6))
+            .clipShape(Capsule())
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .accessibilityAddTraits(.isHeader)
     }
 }

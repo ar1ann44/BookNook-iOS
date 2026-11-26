@@ -5,6 +5,8 @@ struct ClubDetailView: View {
     var onChange: () -> Void = {}
 
     @Environment(SessionStore.self) private var session
+    @Environment(ToastCenter.self) private var toasts
+    @Environment(\.dismiss) private var dismiss
     @State private var club: Club?
     @State private var errorMessage: String?
     @State private var memberToRemove: ClubMember?
@@ -14,12 +16,34 @@ struct ClubDetailView: View {
     @State private var showingNewChannel = false
     @State private var newChannelName = ""
     @State private var showingNewPoll = false
+    @State private var showingEdit = false
+    @State private var confirmingLeave = false
 
     var body: some View {
         ScrollView {
             if let club {
                 VStack(alignment: .leading, spacing: 16) {
                     header(club)
+                    if club.role != nil, let chat = mainChat {
+                        NavigationLink {
+                            ChannelChatView(clubId: clubId, channel: chat)
+                        } label: {
+                            HStack {
+                                Label("Abrir chat", systemImage: "bubble.left.and.bubble.right.fill")
+                                Spacer()
+                                if let unread = chat.unreadCount, unread > 0 {
+                                    UnreadBadge(count: unread, inverted: true)
+                                }
+                            }
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                            .background(Theme.midnight)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                    }
                     if let book = club.currentBook {
                         SectionCard(title: "Leyendo ahora") {
                             BookRow(book: book)
@@ -55,22 +79,52 @@ struct ClubDetailView: View {
         .navigationTitle(club?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
-        .task { await load() }
+        // Reloads when coming back from a chat so unread badges update.
+        .onAppear { Task { await load() } }
         .toolbar {
-            if club?.isAdmin == true {
+            if let club, club.role != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button("Nuevo canal", systemImage: "number") {
-                            newChannelName = ""
-                            showingNewChannel = true
+                        if club.isAdmin {
+                            Button("Nuevo canal", systemImage: "number") {
+                                newChannelName = ""
+                                showingNewChannel = true
+                            }
+                            Button("Nueva encuesta", systemImage: "chart.bar") { showingNewPoll = true }
+                            Button("Editar club", systemImage: "pencil") { showingEdit = true }
+                        } else {
+                            Button("Salir del club", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                                confirmingLeave = true
+                            }
                         }
-                        Button("Nueva encuesta", systemImage: "chart.bar") { showingNewPoll = true }
                     } label: {
-                        Image(systemName: "plus.circle")
+                        Image(systemName: club.isAdmin ? "slider.horizontal.3" : "ellipsis.circle")
                     }
-                    .accessibilityLabel("Herramientas de administrador")
+                    .accessibilityLabel(club.isAdmin ? "Administrar club" : "Opciones del club")
                 }
             }
+        }
+        .sheet(isPresented: $showingEdit) {
+            if let club {
+                EditClubView(club: club) { saved in
+                    toasts.show("Cambios guardados")
+                    self.club?.name = saved.name
+                    self.club?.description = saved.description
+                    self.club?.currentBook = saved.currentBook
+                    onChange()
+                }
+            }
+        }
+        .confirmationDialog(
+            "¿Salir de \(club?.name ?? "este club")?",
+            isPresented: $confirmingLeave,
+            titleVisibility: .visible
+        ) {
+            Button("Salir del club", role: .destructive) { leave() }
+        } message: {
+            Text(club?.privacy == .private
+                 ? "Para volver necesitarás el código de invitación."
+                 : "Podrás volver a unirte cuando quieras.")
         }
         .alert("Nuevo canal", isPresented: $showingNewChannel) {
             TextField("Nombre del canal", text: $newChannelName)
@@ -83,6 +137,7 @@ struct ClubDetailView: View {
         .sheet(isPresented: $showingNewPoll) {
             CreatePollView(clubId: clubId) { response in
                 channels.append(response.channel)
+                toasts.show("Encuesta creada", systemImage: "chart.bar.fill")
             }
         }
         .confirmationDialog(
@@ -174,7 +229,7 @@ struct ClubDetailView: View {
                     ForEach(Array(channels.enumerated()), id: \.element.id) { index, channel in
                         if index > 0 { Divider() }
                         NavigationLink {
-                            destination(for: channel)
+                            destination(for: channel, in: club)
                         } label: {
                             ChannelRow(channel: channel)
                         }
@@ -227,10 +282,18 @@ struct ClubDetailView: View {
         }
     }
 
+    /// The club's first chat channel, opened by the "Abrir chat" button.
+    private var mainChat: Channel? {
+        channels.first { $0.type == .general }
+    }
+
     @ViewBuilder
-    private func destination(for channel: Channel) -> some View {
+    private func destination(for channel: Channel, in club: Club) -> some View {
         if channel.type == .poll, let pollId = channel.pollId {
-            PollView(clubId: clubId, pollId: pollId)
+            PollView(clubId: clubId, pollId: pollId, isAdmin: club.isAdmin) { book in
+                self.club?.currentBook = book
+                onChange()
+            }
         } else {
             ChannelChatView(clubId: clubId, channel: channel)
         }
@@ -269,6 +332,7 @@ struct ClubDetailView: View {
             defer { isJoining = false }
             do {
                 try await ClubService.join(clubId: clubId)
+                toasts.show("Te uniste a \(club?.name ?? "el club")")
                 await load()
                 onChange()
             } catch {
@@ -284,6 +348,21 @@ struct ClubDetailView: View {
             do {
                 let channel = try await ChannelService.createChannel(clubId: clubId, name: name)
                 channels.append(channel)
+                toasts.show("Canal #\(channel.name) creado")
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func leave() {
+        let name = club?.name ?? "el club"
+        Task {
+            do {
+                try await ClubService.leave(clubId: clubId)
+                toasts.show("Saliste de \(name)", systemImage: "rectangle.portrait.and.arrow.right")
+                onChange()
+                dismiss()
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -294,6 +373,7 @@ struct ClubDetailView: View {
         Task {
             do {
                 try await ClubService.removeMember(clubId: clubId, userId: member.id)
+                toasts.show("\(member.username) ya no está en el club", systemImage: "person.badge.minus")
                 await load()
                 onChange()
             } catch {
@@ -325,6 +405,9 @@ private struct ChannelRow: View {
                     .foregroundStyle(Theme.ink.opacity(0.55))
             }
             Spacer()
+            if let unread = channel.unreadCount, unread > 0 {
+                UnreadBadge(count: unread)
+            }
             Image(systemName: "chevron.right")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.ink.opacity(0.35))
@@ -346,5 +429,21 @@ private struct Pill: View {
             .padding(.vertical, 4)
             .background(Theme.midnight.opacity(0.1))
             .clipShape(Capsule())
+    }
+}
+
+struct UnreadBadge: View {
+    let count: Int
+    var inverted = false
+
+    var body: some View {
+        Text(count > 99 ? "99+" : "\(count)")
+            .font(.caption.weight(.bold))
+            .foregroundStyle(inverted ? Theme.midnight : .white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(inverted ? Color.white : Theme.rosy)
+            .clipShape(Capsule())
+            .accessibilityLabel("\(count) sin leer")
     }
 }

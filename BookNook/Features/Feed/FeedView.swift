@@ -1,9 +1,15 @@
 import SwiftUI
 
+private enum FeedRoute: Hashable {
+    case club(Int)
+    case channel(Channel)
+}
+
 struct FeedView: View {
     @Environment(SessionStore.self) private var session
+    @Environment(ToastCenter.self) private var toasts
 
-    @State private var activity: [ActivityItem] = []
+    @State private var activity: [ClubActivity] = []
     @State private var myClubCount = 0
     @State private var discover: [Club] = []
     @State private var recommendations: Recommendations?
@@ -11,9 +17,10 @@ struct FeedView: View {
     @State private var errorMessage: String?
     @State private var joiningClubId: Int?
     @State private var selectedBook: Book?
-    @State private var path: [Int] = []
+    @State private var path: [FeedRoute] = []
 
     private static let maxDiscoverClubs = 6
+    private static let maxActivityClubs = 4
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -37,11 +44,17 @@ struct FeedView: View {
             .overlay { if !hasLoaded { ProgressView() } }
             .navigationTitle("Inicio")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: Int.self) { clubId in
-                ClubDetailView(clubId: clubId, onChange: { Task { await load() } })
+            .navigationDestination(for: FeedRoute.self) { route in
+                switch route {
+                case .club(let clubId):
+                    ClubDetailView(clubId: clubId, onChange: { Task { await load() } })
+                case .channel(let channel):
+                    ChannelChatView(clubId: channel.clubId, channel: channel)
+                }
             }
             .refreshable { await load() }
-            .task { await load() }
+            // Runs again when coming back from a chat, so unread counts stay current.
+            .onAppear { Task { await load() } }
             .sheet(item: $selectedBook) { book in
                 BookDetailSheet(book: book)
             }
@@ -65,16 +78,22 @@ struct FeedView: View {
     @ViewBuilder
     private var activitySection: some View {
         if hasLoaded {
-            FeedSection(title: "Mensajes recientes", systemImage: "bubble.left.and.bubble.right") {
+            FeedSection(title: "Actividad en tus clubes", systemImage: "bubble.left.and.bubble.right") {
                 if myClubCount == 0 {
-                    EmptyCard(text: "Únete a un club para ver aquí sus conversaciones más recientes.")
+                    EmptyCard(text: "Únete a un club para ver aquí sus conversaciones.")
                 } else if activity.isEmpty {
                     EmptyCard(text: "Aún no hay mensajes. ¡Empieza la conversación en uno de tus clubes!")
                 } else {
                     VStack(spacing: 10) {
-                        ForEach(activity) { item in
-                            NavigationLink(value: item.clubId) {
-                                ActivityCard(item: item)
+                        if totalUnread == 0 {
+                            Label("Estás al día con todos tus clubes.", systemImage: "checkmark.circle")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.moss)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        ForEach(visibleActivity) { item in
+                            NavigationLink(value: FeedRoute.channel(item.channel)) {
+                                ClubActivityCard(item: item)
                             }
                             .buttonStyle(.plain)
                         }
@@ -83,6 +102,17 @@ struct FeedView: View {
             }
             .padding(.horizontal, 20)
         }
+    }
+
+    /// Clubs with unread messages first, then the most recently active ones.
+    private var visibleActivity: [ClubActivity] {
+        let unread = activity.filter { $0.unreadCount > 0 }
+        let read = activity.filter { $0.unreadCount == 0 }
+        return Array((unread + read).prefix(Self.maxActivityClubs))
+    }
+
+    private var totalUnread: Int {
+        activity.reduce(0) { $0 + $1.unreadCount }
     }
 
     @ViewBuilder
@@ -95,7 +125,7 @@ struct FeedView: View {
                             DiscoverClubCard(
                                 club: club,
                                 isJoining: joiningClubId == club.id,
-                                onOpen: { path.append(club.id) },
+                                onOpen: { path.append(.club(club.id)) },
                                 onJoin: { join(club) }
                             )
                             .disabled(joiningClubId != nil)
@@ -147,10 +177,9 @@ struct FeedView: View {
     // MARK: Data
 
     private func load() async {
-        async let activityResult = FeedService.activity(limit: 5)
+        async let activityResult = FeedService.clubActivity()
         async let mineResult = ClubService.myClubs()
         async let publicResult = ClubService.publicClubs()
-        async let recommendationsResult = FeedService.recommendations()
 
         var firstError: Error?
 
@@ -171,8 +200,11 @@ struct FeedView: View {
             firstError = firstError ?? error
         }
 
-        // Recommendations depend on Google Books; the feed still works without them.
-        recommendations = try? await recommendationsResult
+        // Recommendations depend on Google Books; the feed still works without
+        // them, and they're only fetched once per visit to keep calls low.
+        if recommendations == nil {
+            recommendations = try? await FeedService.recommendations()
+        }
 
         if let firstError, !(firstError is CancellationError) {
             errorMessage = firstError.localizedDescription
@@ -188,8 +220,9 @@ struct FeedView: View {
             defer { joiningClubId = nil }
             do {
                 try await ClubService.join(clubId: club.id)
+                toasts.show("Te uniste a \(club.name)")
                 await load()
-                path.append(club.id)
+                path.append(.club(club.id))
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -231,36 +264,62 @@ private struct EmptyCard: View {
     }
 }
 
-private struct ActivityCard: View {
-    let item: ActivityItem
+private struct ClubActivityCard: View {
+    let item: ClubActivity
+
+    private var hasUnread: Bool { item.unreadCount > 0 }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            AvatarView(urlString: item.avatarUrl, name: item.username, size: 38)
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(item.clubName)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Theme.moss)
-                    Spacer()
-                    Text(ServerDate.relative(item.createdAt))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                Text(item.username)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.midnight)
-                Text(item.content)
-                    .font(Theme.body)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(item.clubName)
+                    .font(Theme.body.weight(.semibold))
                     .foregroundStyle(Theme.ink)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                Spacer()
+                if hasUnread {
+                    Text(item.unreadCount == 1 ? "1 nuevo" : "\(min(item.unreadCount, 99))\(item.unreadCount > 99 ? "+" : "") nuevos")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Theme.rosy)
+                        .clipShape(Capsule())
+                } else {
+                    Text(ServerDate.relative(item.latestMessage.createdAt))
+                        .font(.caption2)
+                        .foregroundStyle(Theme.ink.opacity(0.5))
+                }
+            }
+            HStack(alignment: .top, spacing: 10) {
+                AvatarView(urlString: item.latestMessage.avatarUrl, name: item.latestMessage.username, size: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    (Text(item.latestMessage.username).fontWeight(.semibold) + Text(": ") + Text(item.latestMessage.content))
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.ink.opacity(hasUnread ? 1 : 0.7))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    Text("#\(item.latestMessage.channelName)\(hasUnread ? " · " + ServerDate.relative(item.latestMessage.createdAt) : "")")
+                        .font(.caption)
+                        .foregroundStyle(Theme.midnight.opacity(0.8))
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.ink.opacity(0.3))
+                    .padding(.top, 6)
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.card)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(hasUnread ? Theme.rosy.opacity(0.6) : .clear, lineWidth: 1.5)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Abre el chat del club")
     }
 }
 

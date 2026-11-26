@@ -1,8 +1,8 @@
 import Foundation
 
 enum FeedService {
-    static func activity(limit: Int = 5) async throws -> [ActivityItem] {
-        try await APIClient.shared.request(.get, "me/activity", query: ["limit": String(limit)])
+    static func clubActivity() async throws -> [ClubActivity] {
+        try await APIClient.shared.request(.get, "me/club-activity")
     }
 
     static func recommendations() async throws -> Recommendations {

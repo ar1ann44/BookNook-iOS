@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ClubsView: View {
+    @Environment(ToastCenter.self) private var toasts
     private enum Tab: String, CaseIterable, Identifiable {
         case mine = "Mis clubes"
         case discover = "Descubrir"
@@ -66,6 +67,7 @@ struct ClubsView: View {
             .task { await load() }
             .sheet(isPresented: $showingCreate) {
                 CreateClubView { club in
+                    toasts.show("Club \(club.name) creado")
                     Task {
                         await load()
                         tab = .mine
@@ -75,6 +77,7 @@ struct ClubsView: View {
             }
             .sheet(isPresented: $showingJoinByCode) {
                 JoinByCodeView { clubId in
+                    toasts.show("Te uniste al club")
                     Task {
                         await load()
                         tab = .mine
@@ -148,6 +151,7 @@ struct ClubsView: View {
             defer { joiningClubId = nil }
             do {
                 try await ClubService.join(clubId: club.id)
+                toasts.show("Te uniste a \(club.name)")
                 await load()
                 path.append(club.id)
             } catch {

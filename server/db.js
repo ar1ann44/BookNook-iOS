@@ -130,6 +130,18 @@ db.exec(`
   )
 `)
 
+// Last message each user has read in each channel, used for unread counts.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS channel_reads (
+    user_id INTEGER NOT NULL,
+    channel_id INTEGER NOT NULL,
+    last_read_message_id INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, channel_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (channel_id) REFERENCES club_channels(id)
+  )
+`)
+
 // Clubs created before channels existed have no General channel, so give
 // every channel-less club one here.
 db.exec(`

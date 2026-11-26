@@ -3,8 +3,12 @@ import SwiftUI
 struct PollView: View {
     let clubId: Int
     let pollId: Int
+    var isAdmin = false
+    var onBookChosen: (Book) -> Void = { _ in }
 
+    @Environment(ToastCenter.self) private var toasts
     @State private var poll: Poll?
+    @State private var isChoosingBook = false
     @State private var votingOptionId: Int?
     @State private var errorMessage: String?
 
@@ -39,6 +43,10 @@ struct PollView: View {
                         .disabled(votingOptionId != nil)
                     }
 
+                    if isAdmin, let winner = winner(of: poll) {
+                        winnerCard(winner)
+                    }
+
                     if let errorMessage {
                         Text(errorMessage).font(.footnote).foregroundStyle(.red)
                     }
@@ -70,6 +78,53 @@ struct PollView: View {
         return top > 0 && option.votes == top
     }
 
+    /// The option with the most votes, if there is a single one ahead.
+    private func winner(of poll: Poll) -> PollOption? {
+        let top = poll.options.map(\.votes).max() ?? 0
+        let leaders = poll.options.filter { $0.votes == top }
+        return top > 0 && leaders.count == 1 ? leaders.first : nil
+    }
+
+    private func winnerCard(_ option: PollOption) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Va ganando \(option.title)", systemImage: "trophy.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.ink)
+            Text("Como administrador, puedes cerrar la elección y hacerlo el libro actual del club.")
+                .font(.footnote)
+                .foregroundStyle(Theme.ink.opacity(0.7))
+            Button {
+                choose(option)
+            } label: {
+                if isChoosingBook {
+                    ProgressView().tint(.white)
+                } else {
+                    Text("Usar como libro actual")
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(isChoosingBook)
+        }
+        .padding(16)
+        .background(Theme.moss.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func choose(_ option: PollOption) {
+        isChoosingBook = true
+        let book = Book(id: nil, title: option.title, author: option.author, coverUrl: option.coverUrl)
+        Task {
+            defer { isChoosingBook = false }
+            do {
+                _ = try await ClubService.setCurrentBook(clubId: clubId, book: book)
+                onBookChosen(book)
+                toasts.show("Ahora leen \(option.title)", systemImage: "book.fill")
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
     private func keepUpdated() async {
         await load()
         while !Task.isCancelled {
@@ -91,6 +146,7 @@ struct PollView: View {
 
     private func vote(for option: PollOption) {
         guard option.id != poll?.myVoteOptionId else { return }
+        Haptics.selection()
         votingOptionId = option.id
         Task {
             defer { votingOptionId = nil }

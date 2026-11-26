@@ -4,6 +4,8 @@ import SwiftUI
 struct EditProfileView: View {
     let store: ProfileStore
 
+    @Environment(ToastCenter.self) private var toasts
+
     @Environment(\.dismiss) private var dismiss
     @State private var bio: String
     @State private var genres: [String]
@@ -151,6 +153,7 @@ struct EditProfileView: View {
                 return
             }
             try await store.uploadAvatar(image)
+            toasts.show("Foto actualizada", systemImage: "camera.fill")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -163,6 +166,7 @@ struct EditProfileView: View {
             defer { isSaving = false }
             do {
                 try await store.save(bio: bio, genres: genres, topBooks: topBooks.compactMap { $0 })
+                toasts.show("Perfil guardado")
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription

@@ -6,7 +6,7 @@ struct MainTabView: View {
             ComingSoonView(title: "Feed", systemImage: "house")
                 .tabItem { Label("Feed", systemImage: "house") }
 
-            ComingSoonView(title: "Clubs", systemImage: "person.3")
+            ClubsView()
                 .tabItem { Label("Clubs", systemImage: "person.3") }
 
             ProfileView()

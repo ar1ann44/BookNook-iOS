@@ -623,7 +623,11 @@ app.get('/me/club-activity', requireAuth, (req, res) => {
       }
     })
     .filter(Boolean)
-    .sort((a, b) => b.latestMessage.id - a.latestMessage.id)
+    .sort(
+      (a, b) =>
+        b.latestMessage.createdAt.localeCompare(a.latestMessage.createdAt) ||
+        b.latestMessage.id - a.latestMessage.id,
+    )
 
   res.json(activity)
 })

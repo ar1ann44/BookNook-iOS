@@ -13,11 +13,13 @@ iOS version of BookNook, a social app for book clubs. Built with SwiftUI and bac
 cd server
 cp .env.example .env   # then fill in JWT_SECRET and GOOGLE_BOOKS_API_KEY
 npm install
-npm run seed           # optional: test users and clubs
+npm run seed           # optional: demo users, clubs and chats in Spanish
 npm run dev
 ```
 
-The server listens on port 4000. Book search uses the Google Books API; create a key in Google Cloud Console with the Books API enabled.
+The server listens on port 4000.
+
+`npm run seed` creates 10 demo readers (`valeria@booknook.mx`, `mateo@booknook.mx`, … all with the password `lectura123`) and 7 clubs with chats and polls. Two clubs are private: *Lectores Nocturnos* (code `LUNA27`) and *Misterio en la Biblioteca* (code `CLAVE8`). Running it again replaces the demo data and leaves other accounts untouched. Book search uses the Google Books API; create a key in Google Cloud Console with the Books API enabled.
 
 ## Run the app
 

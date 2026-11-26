@@ -619,10 +619,12 @@ app.get('/clubs/:id/channels/:channelId/messages', requireAuth, (req, res) => {
               club_messages.user_id, users.username
        FROM club_messages
        JOIN users ON users.id = club_messages.user_id
-       WHERE club_messages.channel_id = ?
+       WHERE club_messages.channel_id = ? AND club_messages.id > ?
        ORDER BY club_messages.created_at ASC, club_messages.id ASC`,
     )
-    .all(channel.id)
+    // ?after=<message id> returns only newer messages, so clients that poll
+    // for new chat don't download the whole history every time.
+    .all(channel.id, Number(req.query.after) || 0)
 
   res.json(
     rows.map((row) => ({

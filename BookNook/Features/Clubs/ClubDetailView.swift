@@ -9,6 +9,11 @@ struct ClubDetailView: View {
     @State private var errorMessage: String?
     @State private var memberToRemove: ClubMember?
     @State private var copiedCode = false
+    @State private var channels: [Channel] = []
+    @State private var isJoining = false
+    @State private var showingNewChannel = false
+    @State private var newChannelName = ""
+    @State private var showingNewPoll = false
 
     var body: some View {
         List {
@@ -22,12 +27,12 @@ struct ClubDetailView: View {
                 if club.isAdmin, let code = club.inviteCode {
                     inviteSection(code: code, clubName: club.name)
                 }
-                Section {
-                    Label("Channels and chat are coming next.", systemImage: "bubble.left.and.bubble.right")
-                        .foregroundStyle(.secondary)
-                } header: {
-                    Text("Channels")
+                if let errorMessage {
+                    Section {
+                        Text(errorMessage).font(.footnote).foregroundStyle(.red)
+                    }
                 }
+                channelsSection(club)
                 membersSection(club)
             } else if let errorMessage {
                 ContentUnavailableView {
@@ -49,6 +54,35 @@ struct ClubDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
         .task { await load() }
+        .toolbar {
+            if club?.isAdmin == true {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("New channel", systemImage: "number") {
+                            newChannelName = ""
+                            showingNewChannel = true
+                        }
+                        Button("New book poll", systemImage: "chart.bar") { showingNewPoll = true }
+                    } label: {
+                        Image(systemName: "plus.circle")
+                    }
+                    .accessibilityLabel("Admin tools")
+                }
+            }
+        }
+        .alert("New channel", isPresented: $showingNewChannel) {
+            TextField("Channel name", text: $newChannelName)
+                .textInputAutocapitalization(.never)
+            Button("Cancel", role: .cancel) {}
+            Button("Create") { createChannel() }
+        } message: {
+            Text("Members will be able to chat in it right away.")
+        }
+        .sheet(isPresented: $showingNewPoll) {
+            CreatePollView(clubId: clubId) { response in
+                channels.append(response.channel)
+            }
+        }
         .confirmationDialog(
             "Remove \(memberToRemove?.username ?? "")?",
             isPresented: Binding(
@@ -166,12 +200,88 @@ struct ClubDetailView: View {
         club.isAdmin && member.id != session.user?.id
     }
 
+    @ViewBuilder
+    private func channelsSection(_ club: Club) -> some View {
+        Section {
+            if club.role == nil {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Join this club to read and write in its channels.")
+                        .foregroundStyle(.secondary)
+                    Button(action: join) {
+                        if isJoining { ProgressView().tint(.white) } else { Text("Join club") }
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(isJoining)
+                }
+                .padding(.vertical, 6)
+            } else {
+                ForEach(channels) { channel in
+                    NavigationLink {
+                        destination(for: channel)
+                    } label: {
+                        Label {
+                            Text(channel.name).foregroundStyle(Theme.ink)
+                        } icon: {
+                            Image(systemName: channel.type == .poll ? "chart.bar.fill" : "number")
+                                .foregroundStyle(channel.type == .poll ? Theme.rosy : Theme.midnight)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("Channels")
+        } footer: {
+            if club.isAdmin {
+                Text("Use the + button to add a channel or a book poll.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func destination(for channel: Channel) -> some View {
+        if channel.type == .poll, let pollId = channel.pollId {
+            PollView(clubId: clubId, pollId: pollId)
+        } else {
+            ChannelChatView(clubId: clubId, channel: channel)
+        }
+    }
+
     private func load() async {
         do {
-            club = try await ClubService.club(id: clubId)
+            let loaded = try await ClubService.club(id: clubId)
+            club = loaded
+            channels = loaded.role == nil ? [] : try await ChannelService.channels(clubId: clubId)
             errorMessage = nil
+        } catch is CancellationError {
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func join() {
+        isJoining = true
+        Task {
+            defer { isJoining = false }
+            do {
+                try await ClubService.join(clubId: clubId)
+                await load()
+                onChange()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func createChannel() {
+        let name = newChannelName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        Task {
+            do {
+                let channel = try await ChannelService.createChannel(clubId: clubId, name: name)
+                channels.append(channel)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 

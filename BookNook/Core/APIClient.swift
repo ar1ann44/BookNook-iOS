@@ -34,8 +34,18 @@ enum HTTPMethod: String {
 final class APIClient {
     static let shared = APIClient()
 
-    var tokenProvider: () -> String? = { nil }
-    var onUnauthorized: () -> Void = {}
+    /// Called on the main actor when the server rejects the saved session.
+    var onUnauthorized: @MainActor () -> Void = {}
+
+    /// Requests run off the main thread, so the token is guarded by a lock
+    /// instead of being read from the (main-actor) session store.
+    private let tokenLock = NSLock()
+    private var storedToken: String?
+
+    var token: String? {
+        get { tokenLock.withLock { storedToken } }
+        set { tokenLock.withLock { storedToken = newValue } }
+    }
 
     private let session: URLSession
     private let decoder = JSONDecoder()
@@ -99,7 +109,7 @@ final class APIClient {
 
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.httpMethod = method.rawValue
-        if authorized, let token = tokenProvider() {
+        if authorized, let token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         return request

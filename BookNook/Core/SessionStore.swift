@@ -7,7 +7,9 @@ final class SessionStore {
     private(set) var user: User?
     private(set) var isRestoring = true
 
-    private var token: String?
+    private var token: String? {
+        didSet { api.token = token }
+    }
     private let api: APIClient
 
     private enum Keys {
@@ -19,9 +21,6 @@ final class SessionStore {
 
     init(api: APIClient = .shared) {
         self.api = api
-        api.tokenProvider = { [weak self] in
-            MainActor.assumeIsolated { self?.token }
-        }
         api.onUnauthorized = { [weak self] in
             self?.signOut()
         }
